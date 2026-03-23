@@ -8,6 +8,7 @@ import { db } from './db/client'
 // ==========================================
 import NavigationBar from './components/layout/NavigationBar.vue'
 import WebHeader from './components/layout/WebHeader.vue'
+import LoadingSpinner from './components/layout/LoadingSpinner.vue'
 
 // Intro & Auth
 import Splash from './components/layout/Splash.vue'
@@ -73,6 +74,9 @@ const currentLanguage = ref(getStored('language', null)) // null means not set y
 const currentScreen = ref('splash') // Always start with splash on load/refresh
 const theme = ref(getStored('theme', 'light'))
 
+const isGlobalLoading = ref(false)
+const loadingMessage = ref('')
+
 // Translation helper
 const t = (key) => {
   const lang = currentLanguage.value || 'en'
@@ -97,6 +101,8 @@ const categories = ref([])
 const trendingProducts = ref([])
 const trendingSellers = ref([])
 const allProducts = ref([])
+const exploreItems = ref([])
+const productReviews = ref([])
 const searchResults = ref([])
 const userNotifications = ref([])
 const userProductCount = ref(0)
@@ -173,6 +179,9 @@ const fetchInitialData = async () => {
     
     // Trending = Top Liked
     trendingProducts.value = allProducts.value.slice(0, 4)
+    
+    // Explore More = Random or other products
+    exploreItems.value = [...allProducts.value].sort(() => 0.5 - Math.random()).slice(0, 6)
 
     const sellers = await db.execute("SELECT * FROM sellers ORDER BY rating DESC, likes_count DESC, clients_count DESC")
     trendingSellers.value = sellers.rows.map(s => ({ 
@@ -188,6 +197,26 @@ const fetchInitialData = async () => {
 
 onMounted(() => {
   fetchInitialData()
+
+  // Handle browser back/forward buttons
+  window.addEventListener('popstate', (event) => {
+    if (event.state && event.state.screen) {
+      currentScreen.value = event.state.screen
+      if (event.state.selectedProduct) selectedProduct.value = event.state.selectedProduct
+      if (event.state.selectedSeller) selectedSeller.value = event.state.selectedSeller
+      if (event.state.selectedCategory) selectedCategory.value = event.state.selectedCategory
+    }
+  })
+
+  // Initialize first history state
+  if (!history.state) {
+    history.replaceState({
+      screen: currentScreen.value,
+      selectedProduct: selectedProduct.value,
+      selectedSeller: selectedSeller.value,
+      selectedCategory: selectedCategory.value
+    }, '', '')
+  }
 })
 
 // Auto-save watchers
@@ -222,8 +251,53 @@ const mockNotifications = ref([
   { id: 3, name: 'Your Ankara Infinity Dress has been shipped', time: '1 day ago', unread: false }
 ])
 
-const navigateTo = (screenName) => {
+const navigateTo = async (screenName, extraState = {}) => {
   currentScreen.value = screenName
+  
+  // Sync additional state if provided
+  if (extraState.selectedProduct) {
+    selectedProduct.value = extraState.selectedProduct
+    
+    // Fetch real reviews for this product
+    try {
+      const res = await db.execute({
+        sql: `
+          SELECT r.*, u.first_name, u.last_name, u.avatar 
+          FROM reviews r 
+          JOIN users u ON r.user_id = u.id 
+          WHERE r.product_id = ?
+          ORDER BY r.created_at DESC
+        `,
+        args: [extraState.selectedProduct.id]
+      })
+      productReviews.value = res.rows.map(r => ({
+        id: r.id,
+        author: `${r.first_name} ${r.last_name}`,
+        rating: r.rating,
+        text: r.text,
+        time: 'Recently', // You could format created_at here
+        avatar: r.avatar
+      }))
+    } catch (e) {
+      console.error("Fetch reviews error:", e)
+      productReviews.value = []
+    }
+  }
+  if (extraState.selectedSeller) selectedSeller.value = extraState.selectedSeller
+  if (extraState.selectedCategory) selectedCategory.value = extraState.selectedCategory
+
+  // Push to browser history if not already there
+  const historyState = {
+    screen: screenName,
+    selectedProduct: selectedProduct.value,
+    selectedSeller: selectedSeller.value,
+    selectedCategory: selectedCategory.value
+  }
+  
+  if (!history.state || history.state.screen !== screenName) {
+    history.pushState(historyState, '', '')
+  }
+  
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -268,6 +342,8 @@ const showNavBar = computed(() => {
 // ==========================================
 
 const handleLogin = async (data) => {
+  isGlobalLoading.value = true;
+  loadingMessage.value = 'Authenticating with the Tribe...';
   try {
     const res = await db.execute({
       sql: 'SELECT * FROM users WHERE email = ?',
@@ -296,10 +372,14 @@ const handleLogin = async (data) => {
     }
   } catch (e) {
     console.error('Login error:', e);
+  } finally {
+    isGlobalLoading.value = false;
   }
 }
 
 const handleSignUp = async (data) => {
+  isGlobalLoading.value = true;
+  loadingMessage.value = 'Joining the heritage...';
   const newId = 'u' + Date.now();
   const signupData = { ...data, id: newId };
   try {
@@ -313,10 +393,14 @@ const handleSignUp = async (data) => {
   } catch (e) {
     console.error('Signup DB error:', e);
     window.alert('Error signing up. Email or username might be taken.');
+  } finally {
+    isGlobalLoading.value = false;
   }
 }
 
 const handleUploadWork = async (data) => {
+  isGlobalLoading.value = true;
+  loadingMessage.value = 'Weaving your work into the heritage...';
   try {
     await db.execute({
       sql: 'INSERT INTO products (name, price, description, image, category_id, owner_id) VALUES (?, ?, ?, ?, ?, ?)',
@@ -327,10 +411,14 @@ const handleUploadWork = async (data) => {
     navigateTo('profile');
   } catch (e) {
     console.error('Upload error:', e);
+  } finally {
+    isGlobalLoading.value = false;
   }
 }
 
 const handleFeedback = async (msg) => {
+  isGlobalLoading.value = true;
+  loadingMessage.value = 'Sending your voice to the Tribe...';
   try {
     await db.execute({
       sql: 'INSERT INTO feedback (user_id, message) VALUES (?, ?)',
@@ -340,20 +428,26 @@ const handleFeedback = async (msg) => {
     navigateTo('settings');
   } catch (e) {
     console.error('Feedback error:', e);
+  } finally {
+    isGlobalLoading.value = false;
   }
 }
 
 const handleUpdateProfile = async (val) => {
+  isGlobalLoading.value = true;
+  loadingMessage.value = 'Updating your heritage profile...';
   userData.value = val; 
   try {
     await db.execute({
       sql: 'UPDATE users SET username = ?, first_name = ?, last_name = ?, whatsapp = ?, user_type = ?, needs = ?, gives = ? WHERE id = ?',
       args: [val.username, val.firstName, val.lastName, val.whatsapp, val.userType, val.needs, val.gives, val.id]
     });
+    navigateTo('profile');
   } catch (e) {
     console.error('Profile update error:', e);
+  } finally {
+    isGlobalLoading.value = false;
   }
-  navigateTo('profile') 
 }
 
 const handleLogout = () => {
@@ -453,20 +547,21 @@ const handleSearch = (query) => {
       :categories="categories"
       :trending-products="trendingProducts"
       :trending-sellers="trendingSellers"
-      @go-details="(p) => { selectedProduct = p; navigateTo('product-details') }"
+      :explore-items="exploreItems"
+      @go-details="(p) => navigateTo('product-details', { selectedProduct: p })"
       @go-notifications="navigateTo('notifications')"
       @go-search="navigateTo('search')"
       @search="handleSearch"
-      @go-explore="(name) => { selectedCategory = name || 'Explore more'; navigateTo('explore') }"
+      @go-explore="(name) => navigateTo('explore', { selectedCategory: name || 'Explore more' })"
       @go-categories="navigateTo('category-list')"
-      @go-trending="() => { selectedCategory = 'Trending Trends'; navigateTo('explore') }"
-      @go-tailor="(seller) => { selectedSeller = seller; navigateTo('tailor-details') }"
+      @go-trending="() => navigateTo('explore', { selectedCategory: 'Trending Trends' })"
+      @go-tailor="(seller) => navigateTo('tailor-details', { selectedSeller: seller })"
       @toggle-like="toggleLike"
     />
     <FavoritesList v-else-if="currentScreen === 'favorites'" 
       :favorite-items="favoriteItems"
       @go-back="navigateTo('home')"
-      @go-details="(p) => { selectedProduct = p; navigateTo('product-details') }"
+      @go-details="(p) => navigateTo('product-details', { selectedProduct: p })"
       @toggle-like="toggleLike"
     />
 
@@ -482,25 +577,25 @@ const handleSearch = (query) => {
     />
 
     <!-- SHOP & EXPLORE PAGES -->
-    <ProductDetails v-else-if="currentScreen === 'product-details'" 
-      :product="selectedProduct"
+<ProductDetails v-else-if="currentScreen === 'product-details'" 
+      :product-id="selectedProduct?.id"
       :t="t"
       @go-back="navigateTo('home')" 
       @go-reviews="navigateTo('reviews')"
       @go-feedback="navigateTo('feedback')"
-      @go-checkout="navigateTo('checkout-confirm')"
-      @toggle-favorite="toggleLike"
+      @toggle-favorite="(p) => toggleLike(p)"
     />
     <ExploreMore v-else-if="currentScreen === 'explore'" 
       :category="selectedCategory"
       :explore-items="filteredExploreItems"
       @go-back="navigateTo('home')"
+      @go-details="(p) => navigateTo('product-details', { selectedProduct: p })"
       @toggle-like="toggleLike"
     />
     <CategoryList v-else-if="currentScreen === 'category-list'" 
       :categories="categories"
       @go-back="navigateTo('home')"
-      @select-category="(name) => { selectedCategory = name; navigateTo('explore') }"
+      @select-category="(name) => navigateTo('explore', { selectedCategory: name })"
     />
     <TailorDetails v-else-if="currentScreen === 'tailor-details'"
       :seller="selectedSeller"
@@ -518,12 +613,12 @@ const handleSearch = (query) => {
       :categories="categories"
       @go-back="navigateTo('home')"
       @search="handleSearch"
-      @select-category="(name) => { selectedCategory = name; navigateTo('explore') }"
+      @select-category="(name) => navigateTo('explore', { selectedCategory: name })"
     />
     <SearchResults v-else-if="currentScreen === 'search-results'" 
       :results="searchResults"
       @go-back="navigateTo('search')"
-      @go-details="(p) => { selectedProduct = p; navigateTo('product-details') }"
+      @go-details="(p) => navigateTo('product-details', { selectedProduct: p })"
       @toggle-like="toggleLike"
     />
     <Notifications v-else-if="currentScreen === 'notifications'" 
@@ -575,6 +670,9 @@ const handleSearch = (query) => {
       :t="t"
       @navigate="navigateTo"
     />
+
+    <!-- GLOBAL LOADING OVERLAY -->
+    <LoadingSpinner v-if="isGlobalLoading" :message="loadingMessage" />
 
   </div>
 </template>

@@ -14,6 +14,7 @@ async function init() {
     // 1. Drop existing tables in correct order
     await client.execute("DROP TABLE IF EXISTS notifications")
     await client.execute("DROP TABLE IF EXISTS feedback")
+    await client.execute("DROP TABLE IF EXISTS reviews")
     await client.execute("DROP TABLE IF EXISTS favorites")
     await client.execute("DROP TABLE IF EXISTS products")
     await client.execute("DROP TABLE IF EXISTS sellers")
@@ -89,6 +90,19 @@ async function init() {
         user_id TEXT,
         message TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `)
+
+    await client.execute(`
+      CREATE TABLE reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER,
+        user_id TEXT,
+        rating INTEGER,
+        text TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(product_id) REFERENCES products(id),
         FOREIGN KEY(user_id) REFERENCES users(id)
       )
     `)
@@ -189,6 +203,22 @@ async function init() {
       await client.execute({
         sql: "INSERT INTO sellers (name, specialty, rating, likes_count, clients_count, avatar, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?)",
         args: [s.name, s.specialty, s.rating, s.likes, s.clients, s.avatar, s.is_verified]
+      })
+    }
+
+    // 4. Seed initial reviews
+    const allProductsRes = await client.execute("SELECT id FROM products LIMIT 5")
+    const reviewTexts = [
+      "Absolutely love this piece! The quality is amazing.",
+      "Beautiful craftsmanship. Worth every cent.",
+      "Fits perfectly and the colors are so vibrant!",
+      "Great service and fast delivery. Highly recommend.",
+      "The material feels so premium. I'm impressed."
+    ]
+    for (const p of allProductsRes.rows) {
+      await client.execute({
+        sql: "INSERT INTO reviews (product_id, user_id, rating, text) VALUES (?, ?, ?, ?)",
+        args: [p.id, 'guest', 4 + Math.floor(Math.random() * 2), reviewTexts[Math.floor(Math.random() * reviewTexts.length)]]
       })
     }
 

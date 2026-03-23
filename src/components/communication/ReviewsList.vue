@@ -1,41 +1,21 @@
 <!-------- (ReviewsList.vue) ./src/components/ReviewsList.vue ------------>
 <script setup>
-import { ref } from 'vue'
+import { REVIEWS_LIST } from '../../constants'
 
-const reviews = ref([
-  {
-    id: 1,
-    author: 'Leslie Alexander',
-    time: '5 Min',
-    rating: 4,
-    text: 'Good service and I\'m happy with the service, best value plant nursery in my area.',
-    avatar: 'https://i.pravatar.cc/150?u=leslie'
+const props = defineProps({
+  reviews: {
+    type: Array,
+    default: () => REVIEWS_LIST
   },
-  {
-    id: 2,
-    author: 'Raji Fakhr',
-    time: '10 Min',
-    rating: 3,
-    text: 'Formal assessment of something with the intention of change if necessary.',
-    avatar: 'https://i.pravatar.cc/150?u=raji'
+  averageRating: {
+    type: Number,
+    default: 4.0
   },
-  {
-    id: 3,
-    author: 'Thuwaybah Issa',
-    time: '15 Min',
-    rating: 3,
-    text: 'Good service and I\'m happy with the service, best value plant nursery in my area.',
-    avatar: 'https://i.pravatar.cc/150?u=thuwaybah'
-  },
-  {
-    id: 4,
-    author: 'Nuhaid Rihab',
-    time: '20 Min',
-    rating: 3,
-    text: 'Review of the latest book on Chaucer. A criticism is a judgment, usually in an article, either favorable.',
-    avatar: 'https://i.pravatar.cc/150?u=nuhaid'
+  totalReviews: {
+    type: Number,
+    default: 23
   }
-])
+})
 
 defineEmits(['go-back', 'write-review'])
 </script>
@@ -51,15 +31,11 @@ defineEmits(['go-back', 'write-review'])
 
     <!-- Overall Rating Section -->
     <div class="overall-rating">
-      <h2 class="rating-score">4.0</h2>
+      <h2 class="rating-score">{{ averageRating.toFixed(1) }}</h2>
       <div class="star-rating large-stars">
-        <span class="star filled">★</span>
-        <span class="star filled">★</span>
-        <span class="star filled">★</span>
-        <span class="star filled">★</span>
-        <span class="star empty">★</span>
+        <span v-for="n in 5" :key="n" class="star" :class="n <= Math.round(averageRating) ? 'filled' : 'empty'">★</span>
       </div>
-      <p class="rating-count">Based on 23 reviews</p>
+      <p class="rating-count">Based on {{ totalReviews }} reviews</p>
     </div>
 
     <!-- Reviews List -->

@@ -2,11 +2,20 @@
 <script setup>
 import { ref } from 'vue'
 import SectionHeader from '../layout/SectionHeader.vue'
+import { DEFAULT_PORTFOLIO, MOCK_REVIEW } from '../../constants'
 
-defineProps({
+const props = defineProps({
   seller: {
     type: Object,
     required: true
+  },
+  portfolio: {
+    type: Array,
+    default: () => DEFAULT_PORTFOLIO
+  },
+  reviews: {
+    type: Array,
+    default: () => [MOCK_REVIEW]
   }
 })
 
@@ -14,16 +23,11 @@ const emit = defineEmits(['go-back', 'go-reviews', 'go-feedback'])
 
 const hasConnected = ref(false)
 
-// Mock portfolio images
-const portfolio = ref([
-  'https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=400&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=400&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=400&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=400&auto=format&fit=crop'
-])
-
 const connectToWhatsApp = () => {
-  const phoneNumber = "255700000000"; 
+  let phoneNumber = props.seller.whatsapp || "255700000000";
+  if (phoneNumber.startsWith('0')) {
+    phoneNumber = '+255' + phoneNumber.substring(1);
+  } 
   const message = `Hello! I'm interested in commissioning a custom piece from you.`;
   const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank');
@@ -87,24 +91,20 @@ const connectToWhatsApp = () => {
       <div class="reviews-section">
         <SectionHeader title="Client Feedbacks" @view-all="$emit('go-reviews')" />
         
-        <div class="review-card">
+        <div v-for="(review, index) in reviews" :key="index" class="review-card" style="margin-bottom: 12px;">
           <div class="review-top">
             <div class="reviewer-info">
-              <img src="https://i.pravatar.cc/150?u=leslie" alt="Reviewer" class="avatar" />
+              <img :src="review.avatar" alt="Reviewer" class="avatar" />
               <div>
-                <h4 class="reviewer-name">Leslie Alexander</h4>
-                <span class="review-time">2 months ago</span>
+                <h4 class="reviewer-name">{{ review.author }}</h4>
+                <span class="review-time">{{ review.time }}</span>
               </div>
             </div>
             <div class="star-rating">
-              <span class="star filled">★</span>
-              <span class="star filled">★</span>
-              <span class="star filled">★</span>
-              <span class="star filled">★</span>
-              <span class="star filled">★</span>
+              <span v-for="star in 5" :key="star" class="star" :class="star <= review.rating ? 'filled' : 'empty'">★</span>
             </div>
           </div>
-          <p class="review-text">Absolutely stunning work! The fit was perfect and the choice of Kente patterns was truly royal.</p>
+          <p class="review-text">{{ review.text }}</p>
         </div>
       </div>
     </div>
@@ -334,6 +334,10 @@ const connectToWhatsApp = () => {
 
 .star.filled {
   color: var(--accent-gold);
+}
+
+.star.empty {
+  color: #E0E0E0;
 }
 
 .review-text {

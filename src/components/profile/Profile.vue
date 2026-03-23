@@ -25,6 +25,13 @@ const showLogoutDialog = ref(false)
 
 <template>
   <div class="profile-page">
+    <div class="header-row">
+      <button class="back-btn" @click="$emit('go-back')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <h1 class="title">{{ t('profile') }}</h1>
+    </div>
+
     <!-- User Info -->
     <div class="user-header">
       <img :src="userData.avatar" alt="User Avatar" class="avatar" />
@@ -45,7 +52,7 @@ const showLogoutDialog = ref(false)
           <span class="stat-label">{{ t('uploadedTrends') }}</span>
         </div>
         <div class="stat-card">
-          <span class="stat-value">4.9</span>
+          <span class="stat-value">{{ userData.rating || '0.0' }}</span>
           <span class="stat-label">{{ t('stats') }}</span>
         </div>
       </div>

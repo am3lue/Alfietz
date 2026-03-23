@@ -1,6 +1,7 @@
 <!-------- (SearchPage.vue) ./src/components/SearchPage.vue ------------>
 <script setup>
 import { ref } from 'vue'
+import { CATEGORY_EXAMPLES_SIMPLE as categoryExamples } from '../../constants'
 
 const props = defineProps({
   categories: {
@@ -20,19 +21,6 @@ const handleSearch = () => {
   if (searchQuery.value.trim()) {
     emit('search', searchQuery.value)
   }
-}
-
-// Extended categories with examples (matches other views)
-const categoryExamples = {
-  'Ankara Essence': 'Infinity Dresses',
-  'Kente Royal': 'Blazers',
-  'Modern Dashiki': 'Kaftans',
-  'Maasai Beads': 'Necklaces',
-  'Traditional Wedding': 'Bridal Gowns',
-  'Heritage Headwear': 'Gold Wraps',
-  'Tribal Footwear': 'Sandals',
-  'Agbada Collection': 'Robes',
-  'Normal Clothes': 'T-Shirts'
 }
 </script>
 

@@ -1,6 +1,25 @@
 <!-------- (ForgotPassword.vue) ./src/components/ForgotPassword.vue ------------>
 <script setup>
-defineEmits(['go-back', 'submit'])
+import { ref } from 'vue'
+
+const email = ref('')
+const errorMessage = ref('')
+
+const emit = defineEmits(['go-back', 'submit'])
+
+const handleSubmit = () => {
+  if (!email.value) {
+    errorMessage.value = 'Please enter your email address.'
+    return
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.value)) {
+    errorMessage.value = 'Please enter a valid email address.'
+    return
+  }
+  errorMessage.value = ''
+  emit('submit', email.value)
+}
 </script>
 
 <template>
@@ -17,10 +36,12 @@ defineEmits(['go-back', 'submit'])
     <div class="form-container">
       <div class="input-group">
         <label>Email address</label>
-        <input type="email" placeholder="Email address" />
+        <input type="email" v-model="email" placeholder="Email address" />
       </div>
 
-      <button class="primary-btn" @click="$emit('submit')">Continue</button>
+      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+
+      <button class="primary-btn" @click="handleSubmit">Continue</button>
     </div>
   </div>
 </template>
@@ -33,6 +54,7 @@ defineEmits(['go-back', 'submit'])
 .form-container { display: flex; flex-direction: column; gap: 24px; }
 .input-group { position: relative; display: flex; flex-direction: column; }
 .input-group label { position: absolute; top: -8px; left: 12px; background: white; padding: 0 4px; font-size: 11px; color: #A0A0A0; z-index: 1; }
+.error-message { color: #E53935; font-size: 13px; font-weight: 500; margin-top: -8px; }
 .input-group input { border: 1px solid #E5E5E5; border-radius: 12px; padding: 16px; font-size: 15px; color: #333; outline: none; }
 .primary-btn { background: #5D8374; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 600; cursor: pointer; }
 </style>

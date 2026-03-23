@@ -4,8 +4,28 @@ import { ref } from 'vue'
 
 const showNewPassword = ref(false)
 const showConfirmPassword = ref(false)
+const newPassword = ref('')
+const confirmPassword = ref('')
+const errorMessage = ref('')
 
-defineEmits(['go-back', 'submit'])
+const emit = defineEmits(['go-back', 'submit'])
+
+const handleSubmit = () => {
+  if (!newPassword.value || !confirmPassword.value) {
+    errorMessage.value = 'Please fill in both fields.'
+    return
+  }
+  if (newPassword.value.length < 6) {
+    errorMessage.value = 'Password must be at least 6 characters long.'
+    return
+  }
+  if (newPassword.value !== confirmPassword.value) {
+    errorMessage.value = 'Passwords do not match.'
+    return
+  }
+  errorMessage.value = ''
+  emit('submit', newPassword.value)
+}
 </script>
 
 <template>
@@ -22,23 +42,29 @@ defineEmits(['go-back', 'submit'])
     <div class="form-container">
       <div class="input-group">
         <label>New password</label>
-        <input :type="showNewPassword ? 'text' : 'password'" placeholder="New password" />
-        <button class="eye-btn" @click="showNewPassword = !showNewPassword">
-          <svg v-if="!showNewPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="m3 3 18 18"/></svg>
-          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
+        <div style="position: relative; display: flex; align-items: center; width: 100%;">
+          <input :type="showNewPassword ? 'text' : 'password'" v-model="newPassword" placeholder="New password" style="padding-right: 48px; width: 100%;" />
+          <button class="eye-btn" @click="showNewPassword = !showNewPassword">
+            <svg v-if="!showNewPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="m3 3 18 18"/></svg>
+            <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
 
       <div class="input-group">
         <label>Confirm password</label>
-        <input :type="showConfirmPassword ? 'text' : 'password'" placeholder="Confirm password" />
-        <button class="eye-btn" @click="showConfirmPassword = !showConfirmPassword">
-          <svg v-if="!showConfirmPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="m3 3 18 18"/></svg>
-          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
+        <div style="position: relative; display: flex; align-items: center; width: 100%;">
+          <input :type="showConfirmPassword ? 'text' : 'password'" v-model="confirmPassword" placeholder="Confirm password" style="padding-right: 48px; width: 100%;" />
+          <button class="eye-btn" @click="showConfirmPassword = !showConfirmPassword">
+            <svg v-if="!showConfirmPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="m3 3 18 18"/></svg>
+            <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
 
-      <button class="primary-btn" @click="$emit('submit')">Reset password</button>
+      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+
+      <button class="primary-btn" @click="handleSubmit">Reset password</button>
     </div>
   </div>
 </template>
@@ -52,6 +78,7 @@ defineEmits(['go-back', 'submit'])
 .input-group { position: relative; display: flex; flex-direction: column; }
 .input-group label { position: absolute; top: -8px; left: 12px; background: white; padding: 0 4px; font-size: 11px; color: #A0A0A0; z-index: 1; }
 .input-group input { border: 1px solid #E5E5E5; border-radius: 12px; padding: 16px; font-size: 15px; color: #333; outline: none; }
-.eye-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; display: flex; }
+.eye-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; display: flex; z-index: 5; }
+.error-message { color: #E53935; font-size: 13px; font-weight: 500; margin-top: -8px; }
 .primary-btn { background: #5D8374; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px;}
 </style>

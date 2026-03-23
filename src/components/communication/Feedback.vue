@@ -3,7 +3,13 @@
 import { ref } from 'vue'
 
 const feedbackText = ref('')
-defineEmits(['go-back', 'submit'])
+const emit = defineEmits(['go-back', 'submit'])
+
+const handleSubmit = () => {
+  if (feedbackText.value.trim()) {
+    emit('submit', feedbackText.value)
+  }
+}
 </script>
 
 <template>
@@ -24,7 +30,14 @@ defineEmits(['go-back', 'submit'])
     </div>
 
     <div class="bottom-action">
-      <button class="primary-btn" @click="$emit('submit', feedbackText)">Submit</button>
+      <button 
+        class="primary-btn" 
+        :class="{ disabled: !feedbackText.trim() }"
+        :disabled="!feedbackText.trim()"
+        @click="handleSubmit"
+      >
+        Submit
+      </button>
     </div>
   </div>
 </template>
@@ -93,5 +106,11 @@ defineEmits(['go-back', 'submit'])
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.primary-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

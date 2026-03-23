@@ -1,5 +1,7 @@
 <!-------- (CategoryList.vue) ./src/components/shop/CategoryList.vue ------------>
 <script setup>
+import { CATEGORY_EXAMPLES_DETAILED as categoryExamples } from '../../constants'
+
 const props = defineProps({
   categories: {
     type: Array,
@@ -8,19 +10,6 @@ const props = defineProps({
 })
 
 defineEmits(['go-back', 'select-category'])
-
-// Extended categories with examples
-const categoryExamples = {
-  'Ankara Essence': 'Infinity Dresses, Mudcloth Vests, Wrap Skirts',
-  'Kente Royal': 'Graduation Stoles, Blazers, Traditional Robes',
-  'Modern Dashiki': 'Kaftans, Tunics, Hoodies',
-  'Maasai Beads': 'Necklaces, Warrior Shukas, Sandals',
-  'Traditional Wedding': 'Bridal Gowns, Groom Suits, Headpieces',
-  'Heritage Headwear': 'Gold Headwraps, Turban, Gele',
-  'Tribal Footwear': 'Leather Sandals, Beaded Slides',
-  'Agbada Collection': 'Grand Robes, Kaftans',
-  'Normal Clothes': 'T-Shirts, Jeans, Casual Dresses, Jackets'
-}
 </script>
 
 <template>

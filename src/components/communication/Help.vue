@@ -1,6 +1,35 @@
 <!-------- (Help.vue) ./src/components/Help.vue ------------>
 <script setup>
+import { ref } from 'vue'
+
 defineEmits(['go-back'])
+
+const faqs = ref([
+  { 
+    question: 'How do I connect with a clothes maker?', 
+    answer: 'Simply browse our categories or use the search bar to find a style you like. Once you click on a product, you can use the "Connect with Designer" button to open a direct WhatsApp chat with the artisan.',
+    isOpen: false 
+  },
+  { 
+    question: 'How are designs priced?', 
+    answer: 'Prices vary based on the artisan, the complexity of the design, and the materials used. Most items have a starting price listed, but custom commissions can be negotiated directly with the tailor.',
+    isOpen: false 
+  },
+  { 
+    question: 'How long does custom tailoring take?', 
+    answer: 'Standard items usually take 1-2 weeks. For complex traditional wear like bridal gowns, it may take 4-6 weeks. Each artisan will provide a specific timeline during your initial consultation.',
+    isOpen: false 
+  },
+  { 
+    question: 'What is REBi Group\'s refund policy?', 
+    answer: 'REBi Group acts as a platform connecting you to independent artisans. While we vet our artisans for quality, specific refund policies are handled by each individual tailor. We recommend clarifying this before payment.',
+    isOpen: false 
+  }
+])
+
+const toggleFaq = (index) => {
+  faqs.value[index].isOpen = !faqs.value[index].isOpen
+}
 </script>
 
 <template>
@@ -28,21 +57,20 @@ defineEmits(['go-back'])
     <h3 class="section-title">Frequently Asked Questions</h3>
     
     <div class="faq-list">
-      <div class="faq-item">
-        <p class="faq-question">How do I connect with a clothes maker?</p>
-        <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-      </div>
-      <div class="faq-item">
-        <p class="faq-question">How are designs priced?</p>
-        <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-      </div>
-      <div class="faq-item">
-        <p class="faq-question">How long does custom tailoring take?</p>
-        <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-      </div>
-      <div class="faq-item">
-        <p class="faq-question">What is REBi Group's refund policy?</p>
-        <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      <div v-for="(faq, index) in faqs" :key="index" class="faq-wrapper">
+        <div class="faq-item" @click="toggleFaq(index)" :class="{ active: faq.isOpen }">
+          <p class="faq-question">{{ faq.question }}</p>
+          <svg 
+            class="chevron" 
+            :class="{ rotated: faq.isOpen }"
+            width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
+        </div>
+        <div v-if="faq.isOpen" class="faq-answer">
+          {{ faq.answer }}
+        </div>
       </div>
     </div>
   </div>
@@ -64,5 +92,9 @@ defineEmits(['go-back'])
 .faq-list { display: flex; flex-direction: column; gap: 12px; }
 .faq-item { display: flex; justify-content: space-between; align-items: center; background: #F8F8F8; padding: 16px 20px; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
 .faq-item:hover { background: #F0F0F0; }
+.faq-item.active { border-bottom-left-radius: 0; border-bottom-right-radius: 0; background: #F0F0F0; }
 .faq-question { margin: 0; font-size: 14px; font-weight: 500; color: #333; }
+.faq-answer { background: #F8F8F8; padding: 0 20px 16px 20px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; font-size: 13px; color: #666; line-height: 1.5; border-top: none; }
+.chevron { transition: transform 0.3s ease; }
+.chevron.rotated { transform: rotate(180deg); }
 </style>

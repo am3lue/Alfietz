@@ -12,11 +12,27 @@ const props = defineProps({
 const showPassword = ref(false)
 const email = ref('')
 const password = ref('')
+const errorMessage = ref('')
 
 const emit = defineEmits(['go-back', 'go-signup', 'go-forgot', 'login'])
 
+const validateForm = () => {
+  if (!email.value || !password.value) {
+    errorMessage.value = 'Please enter both email and password.'
+    return false
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.value)) {
+    errorMessage.value = 'Please enter a valid email address.'
+    return false
+  }
+  errorMessage.value = ''
+  return true
+}
+
 const handleLogin = () => {
-  emit('login', { email: email.value })
+  if (!validateForm()) return
+  emit('login', { email: email.value, password: password.value })
 }
 </script>
 
@@ -52,14 +68,16 @@ const handleLogin = () => {
         <a href="#" @click.prevent="$emit('go-forgot')">{{ t('forgotPassword') }}</a>
       </div>
 
+      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+
       <button class="primary-btn" @click="handleLogin">{{ t('login') }}</button>
 
-      <!-- Divider -->
+      <!-- Divider
       <div class="divider">
         <span>{{ t('or') }}</span>
-      </div>
+      </div> -->
 
-      <!-- Google Login -->
+      <!-- Google Login
       <button class="google-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -68,7 +86,7 @@ const handleLogin = () => {
           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
         </svg>
         {{ t('continueWithGoogle') }}
-      </button>
+      </button> -->
 
       <div class="bottom-text">
         <span>{{ t('newToHeritage') }} </span>
@@ -79,7 +97,8 @@ const handleLogin = () => {
 </template>
 
 <style scoped>
-.eye-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; display: flex; }
+.eye-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; display: flex; z-index: 5; }
+.error-message { color: #E53935; font-size: 13px; font-weight: 500; margin: 8px 0; }
 .forgot-link { text-align: right; margin-top: -8px; }
 .forgot-link a { color: var(--primary-green); font-size: 13px; text-decoration: none; font-weight: 500; }
 .divider { display: flex; align-items: center; text-align: center; margin: 8px 0; color: var(--text-light); font-size: 14px; }

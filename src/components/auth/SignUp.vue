@@ -15,18 +15,41 @@ const lastName = ref('')
 const username = ref('')
 const email = ref('')
 const whatsapp = ref('')
+const password = ref('')
 const userType = ref('buyer')
+const errorMessage = ref('')
 
 const emit = defineEmits(['go-back', 'go-login', 'signup'])
 
+const validateForm = () => {
+  if (!username.value || !firstName.value || !lastName.value || !email.value || !password.value) {
+    errorMessage.value = 'Please fill in all required fields.'
+    return false
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email.value)) {
+    errorMessage.value = 'Please enter a valid email address.'
+    return false
+  }
+  if (password.value.length < 6) {
+    errorMessage.value = 'Password must be at least 6 characters long.'
+    return false
+  }
+  errorMessage.value = ''
+  return true
+}
+
 const handleSignUp = () => {
+  if (!validateForm()) return
+
   emit('signup', {
-    firstName: firstName.value || 'New',
-    lastName: lastName.value || 'User',
-    username: username.value || ('user' + Date.now()),
-    email: email.value || 'guest@example.com',
-    whatsapp: whatsapp.value || '',
-    avatar: 'https://i.pravatar.cc/150?u=' + (email.value || 'guest'),
+    firstName: firstName.value,
+    lastName: lastName.value,
+    username: username.value,
+    email: email.value,
+    password: password.value,
+    whatsapp: whatsapp.value,
+    avatar: 'https://i.pravatar.cc/150?u=' + email.value,
     userType: userType.value,
     needs: '',
     gives: ''
@@ -94,12 +117,16 @@ const handleSignUp = () => {
 
       <div class="input-group">
         <label>{{ t('password') }}</label>
-        <input :type="showPassword ? 'text' : 'password'" :placeholder="t('passwordPlaceholder')" />
-        <button class="eye-btn" @click="showPassword = !showPassword">
-          <svg v-if="!showPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="m3 3 18 18"/></svg>
-          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
+        <div style="position: relative; display: flex; align-items: center; width: 100%;">
+          <input :type="showPassword ? 'text' : 'password'" v-model="password" :placeholder="t('passwordPlaceholder')" style="padding-right: 48px;" />
+          <button class="eye-btn" @click="showPassword = !showPassword">
+            <svg v-if="!showPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="m3 3 18 18"/></svg>
+            <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
+
+      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
       <button class="primary-btn" style="margin-top: 12px;" @click="handleSignUp">{{ t('signup') }}</button>
 
@@ -112,7 +139,8 @@ const handleSignUp = () => {
 </template>
 
 <style scoped>
-.eye-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; display: flex; }
+.eye-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; display: flex; z-index: 5; }
+.error-message { color: #E53935; font-size: 13px; font-weight: 500; margin: 8px 0; }
 .bottom-text { text-align: center; font-size: 14px; color: var(--text-muted); margin-top: 32px; }
 .bottom-text .link { color: var(--primary-green); text-decoration: none; font-weight: 600; }
 

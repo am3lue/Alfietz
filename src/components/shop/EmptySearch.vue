@@ -16,7 +16,7 @@
       <h2 class="title">No results found</h2>
       <p class="subtitle">
         Try using simpler search terms and then<br>
-        filtering the correct tog
+        filtering the correct tag
       </p>
     </div>
   </div>

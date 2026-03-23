@@ -4,33 +4,16 @@ import { ref } from 'vue'
 import ProductCard from './ProductCard.vue'
 import SellerCard from './SellerCard.vue'
 import SectionHeader from '../layout/SectionHeader.vue'
+import { CATEGORY_EXAMPLES_SIMPLE as categoryExamples } from '../../constants'
 
 defineProps({
   categories: { type: Array, default: () => [] },
   trendingProducts: { type: Array, default: () => [] },
-  trendingSellers: { type: Array, default: () => [] }
+  trendingSellers: { type: Array, default: () => [] },
+  exploreItems: { type: Array, default: () => [] }
 })
 
 const searchQuery = ref('')
-
-const exploreItems = [
-  { id: 1, name: 'Bogolan Mudcloth Vest', price: '$75.00' },
-  { id: 2, name: 'Zulu Beaded Sandals', price: '$55.00' },
-  { id: 3, name: 'Modern Adire Tunic', price: '$85.00' },
-]
-
-// Extended categories with examples
-const categoryExamples = {
-  'Ankara Essence': 'Infinity Dresses',
-  'Kente Royal': 'Blazers',
-  'Modern Dashiki': 'Kaftans',
-  'Maasai Beads': 'Necklaces',
-  'Traditional Wedding': 'Bridal Gowns',
-  'Heritage Headwear': 'Gold Wraps',
-  'Tribal Footwear': 'Sandals',
-  'Agbada Collection': 'Robes',
-  'Normal Clothes': 'T-Shirts'
-}
 
 const emit = defineEmits(['go-details', 'go-notifications', 'go-search', 'go-explore', 'go-categories', 'go-trending', 'go-tailor', 'toggle-like', 'search'])
 
@@ -114,10 +97,13 @@ const handleSearch = () => {
     <section class="section">
       <SectionHeader title="Explore more" @view-all="$emit('go-explore')" />
       <div class="explore-grid">
-        <div v-for="item in exploreItems" :key="item.id" class="explore-card">
-          <p class="explore-name">{{ item.name }}</p>
-          <p class="explore-desc">{{ item.price }}</p>
-        </div>
+        <ProductCard 
+          v-for="item in exploreItems" 
+          :key="item.id" 
+          :product="item" 
+          @click="$emit('go-details', item)"
+          @toggle-like="(p) => $emit('toggle-like', p)"
+        />
       </div>
     </section>
   </div>
@@ -288,24 +274,5 @@ const handleSearch = () => {
   .explore-grid {
     grid-template-columns: repeat(6, 1fr);
   }
-}
-
-.explore-card {
-  background-color: var(--primary-tan);
-  padding: 16px;
-  border-radius: var(--radius-md);
-  color: var(--secondary-brown);
-}
-
-.explore-name {
-  font-weight: 600;
-  margin: 0 0 4px 0;
-  font-size: 14px;
-}
-
-.explore-desc {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin: 0;
 }
 </style>

@@ -10,10 +10,32 @@ const props = defineProps({
 })
 
 const tempUser = ref({ ...props.userData })
+const errorMessage = ref('')
 
 const emit = defineEmits(['go-back', 'update:user-data'])
 
+const validateForm = () => {
+  if (!tempUser.value.username || !tempUser.value.firstName || !tempUser.value.lastName || !tempUser.value.whatsapp) {
+    errorMessage.value = 'All fields are required.'
+    return false
+  }
+  if (tempUser.value.username.length < 3) {
+    errorMessage.value = 'Username must be at least 3 characters.'
+    return false
+  }
+  // Basic phone validation (allows + and digits, min 7 chars)
+  const phoneRegex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im
+  // Simple check if regex is too strict for international:
+  if (tempUser.value.whatsapp.length < 7) {
+    errorMessage.value = 'Please enter a valid WhatsApp number.'
+    return false
+  }
+  errorMessage.value = ''
+  return true
+}
+
 const saveChanges = () => {
+  if (!validateForm()) return
   emit('update:user-data', { ...tempUser.value })
 }
 </script>
@@ -107,6 +129,8 @@ const saveChanges = () => {
       <div class="input-group disabled-group">
         <input type="email" v-model="tempUser.email" disabled class="disabled-input" />
       </div>
+
+      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
     </div>
 
     <div class="bottom-action">
@@ -116,6 +140,7 @@ const saveChanges = () => {
 </template>
 
 <style scoped>
+.error-message { color: #E53935; font-size: 13px; font-weight: 500; margin: 12px 0; text-align: center; }
 .profile-page {
   background-color: var(--bg-white);
   min-height: 100vh;

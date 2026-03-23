@@ -1,16 +1,64 @@
 <!-------- (VerifyCode.vue) ./src/components/VerifyCode.vue ------------>
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 const pins = ref(['', '', '', ''])
+const errorMessage = ref('')
 
-defineEmits(['go-back', 'submit'])
+const emit = defineEmits(['go-back', 'submit'])
 
-// Simple auto-focus to next input
-const handleInput = (index, event) => {
-  if (event.target.value && index < 3) {
-    document.getElementById(`pin-${index + 1}`).focus()
+const onInput = (index, event) => {
+  const val = event.target.value
+  // Only allow numbers
+  if (!/^\d*$/.test(val)) {
+    pins.value[index] = ''
+    return
+  }
+  
+  if (val && index < 3) {
+    const nextEl = document.getElementById(`pin-${index + 1}`)
+    if (nextEl) nextEl.focus()
   }
 }
+
+const onKeyDown = (index, event) => {
+  if (event.key === 'Backspace' && !pins.value[index] && index > 0) {
+    const prevEl = document.getElementById(`pin-${index - 1}`)
+    if (prevEl) {
+      prevEl.focus()
+      // Optional: clear previous field on backspace if currently empty
+      // pins.value[index - 1] = '' 
+    }
+  }
+}
+
+const onPaste = (event) => {
+  event.preventDefault()
+  const pastedData = event.clipboardData.getData('text').slice(0, 4).split('')
+  pastedData.forEach((char, i) => {
+    if (i < 4 && /^\d$/.test(char)) {
+      pins.value[i] = char
+    }
+  })
+  // Focus last filled or next empty
+  const lastIdx = Math.min(pastedData.length, 3)
+  const el = document.getElementById(`pin-${lastIdx}`)
+  if (el) el.focus()
+}
+
+const handleSubmit = () => {
+  const code = pins.value.join('')
+  if (code.length < 4) {
+    errorMessage.value = 'Please enter the full 4-digit code.'
+    return
+  }
+  errorMessage.value = ''
+  emit('submit', code)
+}
+
+onMounted(() => {
+  const firstEl = document.getElementById('pin-0')
+  if (firstEl) firstEl.focus()
+})
 </script>
 
 <template>
@@ -31,26 +79,30 @@ const handleInput = (index, event) => {
       <!-- Unique PinCode wrapper from design -->
       <div class="pin-group-wrapper">
         <label class="pin-group-label">PinCode</label>
-        <div class="pin-inputs">
+        <div class="pin-inputs" @paste="onPaste">
           <input 
             v-for="(pin, index) in pins" 
             :key="index"
             :id="`pin-${index}`"
             v-model="pins[index]"
             type="text" 
+            inputmode="numeric"
             maxlength="1" 
             class="pin-box"
-            @input="handleInput(index, $event)"
+            @input="onInput(index, $event)"
+            @keydown="onKeyDown(index, $event)"
           />
         </div>
       </div>
+
+      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
       <div class="resend-text">
         <span>Don't get the code? </span>
         <a href="#" class="link">Resend code</a>
       </div>
 
-      <button class="primary-btn" @click="$emit('submit')">Verify now</button>
+      <button class="primary-btn" @click="handleSubmit">Verify now</button>
     </div>
   </div>
 </template>
@@ -101,6 +153,7 @@ const handleInput = (index, event) => {
 }
 .pin-box:focus { border-color: #5D8374; }
 
+.error-message { color: #E53935; font-size: 13px; font-weight: 500; text-align: center; margin-top: -8px; }
 .resend-text { text-align: center; font-size: 13px; color: #666; margin-top: -8px; }
 .resend-text .link { color: #5D8374; text-decoration: none; font-weight: 500; }
 .primary-btn { background: #5D8374; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 600; cursor: pointer; }
