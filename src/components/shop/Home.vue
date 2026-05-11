@@ -136,6 +136,7 @@ watch(searchQuery, (newVal) => {
           v-for="product in trendingProducts" 
           :key="product.id" 
           :product="product" 
+          loading="lazy"
           @click="$emit('go-details', product)"
           @toggle-like="(p) => $emit('toggle-like', p)"
         />
@@ -150,6 +151,7 @@ watch(searchQuery, (newVal) => {
           v-for="seller in trendingSellers" 
           :key="seller.id" 
           :seller="seller" 
+          loading="lazy"
           @click="$emit('go-tailor', seller)"
         />
       </div>
@@ -163,6 +165,7 @@ watch(searchQuery, (newVal) => {
           v-for="item in exploreItems" 
           :key="item.id" 
           :product="item" 
+          loading="lazy"
           @click="$emit('go-details', item)"
           @toggle-like="(p) => $emit('toggle-like', p)"
         />
@@ -565,8 +568,11 @@ watch(searchQuery, (newVal) => {
   display: flex;
   gap: 16px;
   overflow-x: auto;
-  padding-bottom: 12px;
+  padding: 4px 4px 16px 4px; /* Added padding to prevent shadow clipping */
+  margin: -4px -4px 0 -4px;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch; /* Momentum scrolling on iOS */
+  scroll-snap-type: x proximity; /* Subtle snapping for better feel */
 }
 
 .scroll-container::-webkit-scrollbar {
@@ -574,10 +580,9 @@ watch(searchQuery, (newVal) => {
 }
 
 .category-card {
-  width: fit-content;
-  min-width: 120px;
+  width: 140px; /* Slightly wider for better text fit */
   padding: 16px;
-  height: 120px;
+  height: 140px;
   background-color: var(--wood-walnut);
   border-radius: var(--radius-lg);
   display: flex;
@@ -586,6 +591,14 @@ watch(searchQuery, (newVal) => {
   flex-shrink: 0;
   cursor: pointer;
   text-align: center;
+  scroll-snap-align: start;
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s ease;
+}
+
+.category-card:active {
+  transform: scale(0.95);
+  border-color: var(--accent-amber);
 }
 
 .card-content {

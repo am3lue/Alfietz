@@ -495,7 +495,7 @@ const handleDelete = () => {
 
 .layout-container {
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse; /* Image on top for mobile */
 }
 
 @media (min-width: 768px) {
@@ -508,7 +508,7 @@ const handleDelete = () => {
 
 .image-section {
   position: relative;
-  height: 50vh;
+  height: 60vh; /* Taller for mobile impact */
   background: var(--wood-deep);
   border-radius: 0 0 40px 40px;
   overflow: hidden;
@@ -520,11 +520,11 @@ const handleDelete = () => {
 
 @media (min-width: 768px) {
   .image-section {
-    flex: 0 0 45%; /* Constant size: 45% of width */
+    flex: 0 0 45%; 
     max-width: 600px;
     height: 100%;
     border-radius: 0;
-    order: 2; /* Product on Right */
+    order: 2; /* Product on Right on Desktop */
   }
 }
 
@@ -552,6 +552,7 @@ const handleDelete = () => {
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .desktop-only { display: none; }
@@ -591,12 +592,13 @@ const handleDelete = () => {
 .thumb-wrapper {
   width: 60px;
   height: 60px;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
   border: 2px solid transparent;
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .thumb-wrapper.active {
@@ -612,13 +614,13 @@ const handleDelete = () => {
 
 .main-image {
   max-width: 100%;
-  max-height: 80%; /* Constant relative size */
+  max-height: 80%; 
   object-fit: contain;
   transition: transform 0.5s ease;
 }
 
 .content-section {
-  padding: 40px 24px;
+  padding: 32px 24px 140px 24px; /* Space for sticky bar */
   max-width: 800px;
   margin: 0 auto;
 }
@@ -631,7 +633,7 @@ const handleDelete = () => {
     padding: 60px 60px;
     margin: 0;
     max-width: none;
-    order: 1; /* Details on Left */
+    order: 1; /* Details on Left on Desktop */
   }
 }
 
@@ -644,10 +646,10 @@ const handleDelete = () => {
 }
 
 .product-title {
-  font-size: 32px;
+  font-size: 28px; /* Slightly smaller for mobile */
   font-weight: 800;
   color: var(--text-primary);
-  line-height: 1.1;
+  line-height: 1.2;
   background: linear-gradient(to right, var(--text-primary), var(--accent-amber));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -656,7 +658,7 @@ const handleDelete = () => {
 .price-pill {
   background: var(--price-bg);
   border: 1px solid var(--price-border);
-  padding: 10px 20px;
+  padding: 10px 16px;
   border-radius: 30px;
   box-shadow: 0 0 20px rgba(74, 222, 128, 0.1);
 }
@@ -665,7 +667,7 @@ const handleDelete = () => {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
   color: var(--price-text);
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .category-module {
@@ -678,7 +680,7 @@ const handleDelete = () => {
   background: var(--wood-walnut);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-amber);
   text-transform: uppercase;
@@ -699,7 +701,7 @@ const handleDelete = () => {
 }
 
 .spec-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -721,7 +723,7 @@ const handleDelete = () => {
 
 .description {
   font-size: 15px;
-  line-height: 1.7;
+  line-height: 1.8;
   color: var(--text-muted);
 }
 
@@ -759,51 +761,57 @@ const handleDelete = () => {
 .bottom-action-bar {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
   width: 100%;
-  max-width: 1440px;
-  padding: 24px;
+  padding: 16px 20px 32px 20px; /* Safe area padding */
   background: var(--glass-bg);
-  backdrop-filter: blur(30px);
+  backdrop-filter: blur(40px);
   border-top: 1px solid var(--glass-border);
   z-index: 1000;
   box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
 }
 
 .action-grid {
   display: grid;
-  grid-template-columns: 1fr 2.5fr;
-  gap: 16px;
+  grid-template-columns: 1fr 2fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 600px;
 }
 
 .negotiate-btn {
   background: var(--wood-walnut);
   border: 1px solid var(--glass-border);
   color: var(--text-amber);
-  border-radius: 18px;
+  border-radius: 20px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 18px;
-  transition: all 0.3s;
+  gap: 8px;
+  padding: 16px;
+  min-height: 56px;
+  font-size: 14px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .connect-btn {
   background: linear-gradient(135deg, #166534, #15803d);
   color: white;
   border: none;
-  border-radius: 18px;
+  border-radius: 20px;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 18px;
+  gap: 10px;
+  padding: 16px;
+  min-height: 56px;
+  font-size: 15px;
   box-shadow: 0 0 20px rgba(22, 101, 52, 0.3);
-  transition: all 0.3s;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .negotiation-bar {
@@ -811,6 +819,7 @@ const handleDelete = () => {
   align-items: center;
   gap: 12px;
   width: 100%;
+  max-width: 600px;
 }
 
 .input-wrapper {
@@ -831,19 +840,22 @@ const handleDelete = () => {
   width: 100%;
   background: var(--input-bg);
   border: 1px solid var(--accent-amber);
-  border-radius: 18px;
-  padding: 18px 20px 18px 40px;
+  border-radius: 20px;
+  padding: 16px 20px 16px 48px;
   color: white;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   outline: none;
+  min-height: 56px;
+  font-size: 16px; /* No zoom */
 }
 
 .send-offer-btn {
   background: var(--accent-amber);
   color: white;
-  padding: 18px 24px;
-  border-radius: 18px;
+  padding: 0 24px;
+  height: 56px;
+  border-radius: 20px;
   font-weight: 800;
   box-shadow: 0 0 20px var(--accent-glow);
 }
@@ -856,5 +868,8 @@ const handleDelete = () => {
   border-radius: 50%;
   color: var(--text-muted);
   font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

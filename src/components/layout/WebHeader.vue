@@ -88,8 +88,8 @@ defineEmits(['navigate', 'go-notifications', 'toggle-theme'])
 .header-content {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 0 16px; /* Slightly tighter for mobile */
-  height: 64px;    /* Shorter for mobile */
+  padding: 0 12px; /* Tighter padding for small mobile */
+  height: 60px;    /* Slightly shorter */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -105,20 +105,21 @@ defineEmits(['navigate', 'go-notifications', 'toggle-theme'])
 .logo-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px; /* Tighter gap */
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .logo-circle {
   position: relative;
-  width: 36px;
-  height: 36px;
-  background: white; /* Contrast for the logo */
+  width: 34px; /* Slightly smaller */
+  height: 34px;
+  background: white; 
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
+  padding: 5px;
   overflow: hidden;
   box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
@@ -147,9 +148,9 @@ defineEmits(['navigate', 'go-notifications', 'toggle-theme'])
 }
 
 .brand-name {
-  font-size: 20px;
+  font-size: 18px; /* Smaller for mobile */
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   background: linear-gradient(to right, #FFFBEB, var(--accent-amber));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -158,6 +159,7 @@ defineEmits(['navigate', 'go-notifications', 'toggle-theme'])
 @media (min-width: 768px) {
   .brand-name {
     font-size: 24px;
+    letter-spacing: 1px;
   }
 }
 
@@ -166,7 +168,7 @@ defineEmits(['navigate', 'go-notifications', 'toggle-theme'])
   gap: 40px;
 }
 
-@media (min-width: 1024px) { /* Only show on larger screens to keep mobile lean */
+@media (min-width: 1024px) { 
   .desktop-nav {
     display: flex;
   }
@@ -200,21 +202,27 @@ defineEmits(['navigate', 'go-notifications', 'toggle-theme'])
 
 .header-actions {
   display: flex;
-  gap: 12px;
+  gap: 8px; /* Tighter gap */
 }
 
 .action-btn {
   position: relative;
   background-color: var(--wood-walnut);
   border: 1px solid var(--glass-border);
-  width: 36px;
-  height: 36px;
+  width: 38px; /* Optimized touch target balance */
+  height: 38px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
   transition: all 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.action-btn:active {
+  transform: scale(0.9);
+  background-color: var(--wood-polished);
 }
 
 @media (min-width: 768px) {

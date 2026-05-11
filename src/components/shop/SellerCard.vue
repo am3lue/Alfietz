@@ -4,6 +4,10 @@ defineProps({
   seller: {
     type: Object,
     required: true
+  },
+  loading: {
+    type: String,
+    default: 'eager'
   }
 })
 </script>
@@ -11,7 +15,7 @@ defineProps({
 <template>
   <div class="seller-card">
     <div class="avatar-wrapper">
-      <img :src="seller.avatar" :alt="seller.name" class="seller-avatar" />
+      <img :src="seller.avatar" :alt="seller.name" class="seller-avatar" :loading="loading" />
       <div v-if="seller.isVerified" class="verify-badge">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
       </div>
@@ -31,34 +35,38 @@ defineProps({
 
 <style scoped>
 .seller-card {
-  min-width: 140px;
-  background: white;
-  padding: 16px;
+  min-width: 150px;
+  background: var(--wood-walnut);
+  padding: 20px 16px;
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.2s ease;
+  transition: all 0.3s ease;
+  border: 1px solid var(--glass-border);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }
 
-.seller-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
+.seller-card:active {
+  transform: scale(0.95);
+  background: var(--wood-polished);
 }
 
 .avatar-wrapper {
   position: relative;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .seller-avatar {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--wood-walnut);
+  border: 3px solid var(--wood-deep);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
 .verify-badge {
@@ -66,52 +74,55 @@ defineProps({
   bottom: 0;
   right: 0;
   background: var(--accent-amber);
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid white;
+  border: 2px solid var(--wood-deep);
 }
 
 .seller-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  color: var(--text-primary); /* Consistent Dark Brown */
+  color: var(--text-primary);
   margin: 0 0 4px 0;
 }
 
 .seller-specialty {
   font-size: 11px;
-  color: var(--text-muted); /* Consistent Muted Brown */
-  margin: 0 0 8px 0;
+  color: var(--text-muted);
+  margin: 0 0 12px 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  font-weight: 600;
 }
 
 .seller-rating {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
+  background: var(--wood-deep);
+  padding: 4px 10px;
+  border-radius: 20px;
 }
 
 .star {
-  color: var(--accent-gold);
-  font-size: 12px;
+  color: var(--text-amber);
+  font-size: 14px;
 }
 
 .rating-value, .likes-value {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
 .divider {
   color: var(--text-muted);
-  font-size: 10px;
-  margin: 0 2px;
+  opacity: 0.5;
 }
 
 .likes-value {

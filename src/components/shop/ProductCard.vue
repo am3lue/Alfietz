@@ -5,6 +5,10 @@ defineProps({
   product: {
     type: Object,
     required: true
+  },
+  loading: {
+    type: String,
+    default: 'eager'
   }
 })
 
@@ -15,7 +19,7 @@ defineEmits(['toggle-like', 'click'])
   <div class="product-card group" @click="$emit('click')">
     <!-- Image Box -->
     <div class="image-wrapper">
-      <img :src="product.image" :alt="product.name" class="product-img" />
+      <img :src="product.image" :alt="product.name" class="product-img" :loading="loading" />
 
       <!-- Out of Stock Badge -->
       <div v-if="product.status === 'Out of Stock'" class="oos-badge">
@@ -121,8 +125,8 @@ defineEmits(['toggle-like', 'click'])
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 32px;
-  height: 32px;
+  width: 44px; /* Optimized touch target */
+  height: 44px; /* Optimized touch target */
   background: rgba(0,0,0,0.5);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255,255,255,0.1);
@@ -133,6 +137,11 @@ defineEmits(['toggle-like', 'click'])
   color: white;
   z-index: 5;
   transition: all 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.heart-btn:active {
+  transform: scale(0.9);
 }
 
 .heart-btn:hover {
@@ -169,7 +178,7 @@ defineEmits(['toggle-like', 'click'])
 
 .product-name {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px; /* Slightly larger for mobile */
   font-weight: 600;
   color: var(--text-primary);
   /* Remove white-space: nowrap for better multiline support in horizontal mode */
@@ -178,6 +187,7 @@ defineEmits(['toggle-like', 'click'])
   -webkit-box-orient: vertical;
   overflow: hidden;
   transition: color 0.3s ease;
+  line-height: 1.4;
 }
 
 .product-card:hover .product-name {
@@ -188,31 +198,32 @@ defineEmits(['toggle-like', 'click'])
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: auto;
+  margin-top: 8px;
 }
 
 .product-price {
   font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--accent-amber);
   letter-spacing: -0.5px;
 }
 
 .add-btn {
-  font-size: 10px;
+  font-size: 12px; /* Slightly larger for mobile */
   font-weight: 800;
   color: var(--text-muted);
   background: rgba(217, 119, 6, 0.1);
   border: 1px solid rgba(217, 119, 6, 0.2);
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 8px 16px; /* Larger padding for mobile tap */
+  border-radius: 8px;
   transition: all 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.product-card:hover .add-btn {
+.add-btn:active {
   background: var(--accent-amber);
   color: white;
-  border-color: var(--accent-amber);
+  transform: scale(0.95);
 }
 </style>

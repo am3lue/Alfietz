@@ -124,25 +124,39 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  font-size: 14px; /* Default for mobile */
+  font-size: 16px; /* Optimized for mobile readability and to prevent iOS input zoom */
+  -webkit-text-size-adjust: 100%; /* Prevent automatic font resizing */
+  overscroll-behavior-y: none; /* App-like feel, prevent pull-to-refresh bounce */
 }
 
 @media (min-width: 768px) {
   html, body {
-    font-size: 16px; /* Larger for desktop */
+    font-size: 16px; 
   }
 }
 
 body {
   background: var(--bg-radial);
   background-attachment: fixed;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
+  line-height: 1.6; /* Improved legibility */
   overflow-x: hidden;
   transition: background 0.5s ease, color 0.5s ease;
+  width: 100%;
+  position: fixed; /* Lock scroll on body to prevent rubber banding on iOS */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+#app {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 body::before {
@@ -226,24 +240,30 @@ input {
   color: white;
   border-radius: var(--radius-md);
   padding: 16px;
+  min-height: 56px; /* Optimized touch target */
   font-size: 16px;
   font-weight: 700;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   box-shadow: 0 0 15px rgba(217, 119, 6, 0.3);
   letter-spacing: 1px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .icon-btn {
   background-color: var(--wood-walnut);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
-  width: 40px;
-  height: 40px;
+  width: 44px; /* Optimized touch target */
+  height: 44px; /* Optimized touch target */
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .icon-btn:hover {
@@ -256,8 +276,8 @@ input {
   background-color: var(--wood-walnut);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
-  width: 44px;
-  height: 44px;
+  width: 44px; /* Optimized touch target */
+  height: 44px; /* Optimized touch target */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -265,6 +285,7 @@ input {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   z-index: 10;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .back-btn:hover {
@@ -291,7 +312,7 @@ input {
 }
 
 .input-group label {
-  font-size: 11px;
+  font-size: 12px; /* Slightly larger for readability */
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.5px;
@@ -303,8 +324,9 @@ input {
   background-color: var(--input-bg);
   border: 2px solid var(--input-border);
   border-radius: var(--radius-md);
-  padding: 18px 20px;
-  font-size: 15px;
+  padding: 16px 20px; /* Refined padding */
+  min-height: 56px; /* Better touch area and alignment */
+  font-size: 16px; /* Prevent iOS zoom */
   color: var(--input-text);
   transition: all 0.3s ease;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
