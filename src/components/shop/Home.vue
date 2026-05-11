@@ -22,6 +22,18 @@ const handleSearch = () => {
     emit('search', searchQuery.value)
   }
 }
+
+// Live search as user types
+import { watch } from 'vue'
+let searchTimeout = null
+watch(searchQuery, (newVal) => {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    if (newVal.trim()) {
+      emit('search', newVal)
+    }
+  }, 500) // 500ms debounce
+})
 </script>
 
 <template>

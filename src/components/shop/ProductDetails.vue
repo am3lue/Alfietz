@@ -34,6 +34,7 @@ const reviews = ref([])
 const loading = ref(true)
 const error = ref(null)
 const parsedColors = ref([])
+const gallery = ref([])
 const selectedSize = ref('')
 const hasConnected = ref(false)
 const isNegotiating = ref(false)
@@ -74,7 +75,7 @@ onMounted(async () => {
     
     product.value = {
       ...prodRes.rows[0],
-      liked: false, // Will sync from global state
+      liked: false, 
       isFavorite: false
     }
     
@@ -93,54 +94,64 @@ onMounted(async () => {
         console.error('Failed to parse variants_json:', e)
       }
     }
+
+    // Parse gallery
+    if (product.value.gallery_json) {
+      try {
+        gallery.value = JSON.parse(product.value.gallery_json)
+      } catch (e) {
+        console.error('Failed to parse gallery_json:', e)
+        gallery.value = []
+      }
+    }
     
     // Fallback to description parsing if no structured variants or parsing failed
     if (parsedColors.value.length === 0) {
       const desc = product.value.description || ''
       const colorMatch = desc.match(/Colors:\s*(.*)/i)
-      if (colorMatch) {
-        const colorStr = colorMatch[1].trim()
-        if (colorStr.toLowerCase() === 'default') {
-          parsedColors.value = [{ id: 'default', hex: '#795548', name: 'Default', inStock: true }]
-        } else {
-          const hexCodes = colorStr.match(/#[a-fA-F0-9]{3,6}/g)
-          if (hexCodes) {
-            parsedColors.value = hexCodes.map((hex, i) => ({ id: i, hex, name: hex, inStock: true }))
+      if (colorMatch && colorMatch[1]) {
+        const parts = colorMatch[1].split(',').map(s => s.trim())
+        parsedColors.value = parts.map((p, i) => {
+          const match = p.match(/(.*)\s+\((.*)\)/)
+          return {
+            id: i,
+            name: match ? match[1] : p,
+            hex: match ? match[2] : '#8B4513',
+            inStock: true,
+            image: ''
           }
-        }
-      } else {
-        parsedColors.value = [{ id: 'default', hex: '#795548', name: 'Default', inStock: true }]
+        })
       }
     }
-    
-    // Fetch related reviews (using feedback table for now)
-    const reviewRes = await db.execute({
+
+    // Initial variant selection
+    if (parsedColors.value.length > 0) {
+      selectedColorId.value = parsedColors.value[0].id
+    }
+
+    // Fetch reviews
+    const revRes = await db.execute({
       sql: `
-        SELECT f.*, u.first_name, u.last_name, u.avatar 
-        FROM feedback f 
-        JOIN users u ON f.user_id = u.id 
-        WHERE f.message LIKE ? 
-        ORDER BY f.created_at DESC 
-        LIMIT 5
+        SELECT r.*, u.first_name, u.last_name, u.avatar 
+        FROM reviews r 
+        JOIN users u ON r.user_id = u.id 
+        WHERE r.product_id = ?
+        ORDER BY r.created_at DESC
       `,
-      args: [`%${product.value.name}%`]
+      args: [props.productId]
     })
-    
-    reviews.value = reviewRes.rows.map(r => ({
+    reviews.value = revRes.rows.map(r => ({
       id: r.id,
       author: `${r.first_name} ${r.last_name}`,
-      avatar: r.avatar || 'https://i.pravatar.cc/150',
-      rating: 5, // Default for now
-      text: r.message,
-      time: new Date(r.created_at).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      })
+      rating: r.rating,
+      text: r.text,
+      time: 'Recently',
+      avatar: r.avatar
     }))
     
   } catch (e) {
-    console.error('ProductDetails DB fetch error:', e)
-    error.value = 'Failed to load product details. Please try again.'
+    console.error('Fetch error:', e)
+    error.value = 'Failed to load heritage item'
   } finally {
     loading.value = false
   }
@@ -347,6 +358,25 @@ const handleDelete = () => {
         </div>
         <div class="main-image-container">
           <img :src="currentVariant.image || product.image" :alt="product.name" class="main-image" />
+          
+          <!-- Image Gallery Thumbnails -->
+          <div v-if="gallery.length > 0" class="image-gallery-nav">
+            <div 
+              class="thumb-wrapper" 
+              :class="{ active: (currentVariant.image || product.image) === product.image }"
+              @click="selectedColorId = null"
+            >
+              <img :src="product.image" class="thumb-img" />
+            </div>
+            <div 
+              v-for="(img, idx) in gallery" 
+              :key="idx" 
+              class="thumb-wrapper"
+              @click="product.image = img; selectedColorId = null"
+            >
+              <img :src="img" class="thumb-img" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -540,8 +570,44 @@ const handleDelete = () => {
   height: 100%;
   padding: 40px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 24px;
+}
+
+.image-gallery-nav {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 8px;
+  width: 100%;
+  justify-content: center;
+  scrollbar-width: none;
+}
+
+.image-gallery-nav::-webkit-scrollbar { display: none; }
+
+.thumb-wrapper {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.thumb-wrapper.active {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .main-image {

@@ -22,10 +22,30 @@ const handleSearch = () => {
     emit('search', searchQuery.value)
   }
 }
+
+// Live search as user types
+import { watch } from 'vue'
+let searchTimeout = null
+watch(searchQuery, (newVal) => {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    if (newVal.trim()) {
+      emit('search', newVal)
+    }
+  }, 500) // 500ms debounce
+})
 </script>
 
 <template>
   <div class="search-page">
+    <!-- Header with Back Button -->
+    <div class="header-row">
+      <button class="back-btn" @click="$emit('go-back')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <h1 class="title">{{ t('search') }}</h1>
+    </div>
+
     <!-- Search Input Area -->
     <div class="search-controls">
       <div class="search-bar">
@@ -81,9 +101,36 @@ const handleSearch = () => {
 .search-page {
   background-color: var(--wood-deep);
   min-height: 100vh;
-  padding: 20px;
+  padding: 24px 20px;
   display: flex;
   flex-direction: column;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.back-btn {
+  background: var(--wood-polished);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 /* Search Controls */

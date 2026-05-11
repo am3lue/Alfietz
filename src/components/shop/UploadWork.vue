@@ -22,7 +22,8 @@ const productData = ref({
   material: '',
   status: 'In Stock',
   colors: [], // { hex: string, name: string, image: string, inStock: boolean, isUploading: boolean }
-  image: 'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?q=80&w=800'
+  image: 'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?q=80&w=800',
+  gallery: [] // Array of image URLs
 })
 
 onMounted(() => {
@@ -38,6 +39,7 @@ onMounted(() => {
           inStock: c.inStock !== undefined ? c.inStock : true
         }))
       }
+      if (!parsed.gallery) parsed.gallery = []
       productData.value = { ...productData.value, ...parsed }
     } catch (e) {
       console.error('Failed to load draft:', e)
@@ -53,6 +55,8 @@ const colorInput = ref('#D97706')
 const variantNameInput = ref('')
 const errorMessage = ref('')
 const isMainImageUploading = ref(false)
+const uploadProgress = ref(0)
+const totalToUpload = ref(0)
 
 // Function to upload to ImgBB
 const uploadToImgBB = async (file) => {
@@ -78,16 +82,36 @@ const uploadToImgBB = async (file) => {
 }
 
 const handleMainImageUpload = async (event) => {
-  const file = event.target.files[0]
-  if (!file) return
+  const files = Array.from(event.target.files)
+  if (files.length === 0) return
   
   isMainImageUploading.value = true
   errorMessage.value = ''
-  const url = await uploadToImgBB(file)
-  if (url) {
-    productData.value.image = url
+  uploadProgress.value = 0
+  totalToUpload.value = files.length
+
+  // Maintain order by uploading sequentially or using Promise.all if we handle indices
+  // Sequential is safer for "maintaining order" if we push to array
+  for (let i = 0; i < files.length; i++) {
+    const url = await uploadToImgBB(files[i])
+    if (url) {
+      if (i === 0 && !productData.value.image.includes('unsplash')) {
+        // If it's the first image and we already have a main image, maybe replace it or add to gallery
+        productData.value.gallery.push(url)
+      } else if (i === 0) {
+        productData.value.image = url
+      } else {
+        productData.value.gallery.push(url)
+      }
+    }
+    uploadProgress.value = i + 1
   }
+  
   isMainImageUploading.value = false
+}
+
+const removeGalleryImage = (index) => {
+  productData.value.gallery.splice(index, 1)
 }
 
 const addColor = () => {
@@ -155,7 +179,8 @@ ${productData.value.description}
     ...productData.value,
     price: `TSh ${Number(productData.value.price).toLocaleString()}`,
     description: enrichedDescription,
-    variants_json: JSON.stringify(productData.value.colors)
+    variants_json: JSON.stringify(productData.value.colors),
+    gallery_json: JSON.stringify(productData.value.gallery)
   }
   
   // Clear draft on success
@@ -174,17 +199,29 @@ ${productData.value.description}
     </div>
 
     <div class="form-container">
-      <!-- Main Product Image -->
       <div class="input-group">
-        <label>Main Product Image</label>
+        <label>Product Images (Select multiple to create a gallery)</label>
         <div class="image-upload-wrapper">
-          <div class="preview-box" :class="{ loading: isMainImageUploading }">
-            <img :src="productData.image" alt="Preview" class="preview-img" />
+          <div class="main-preview-box" :class="{ loading: isMainImageUploading }">
+            <img :src="productData.image" alt="Main Preview" class="preview-img" />
             <div v-if="isMainImageUploading" class="upload-overlay">
               <span class="loader"></span>
+              <span class="progress-text">{{ uploadProgress }} / {{ totalToUpload }}</span>
             </div>
           </div>
-          <input type="file" accept="image/*" @change="handleMainImageUpload" class="file-input" />
+          
+          <div v-if="productData.gallery.length > 0" class="gallery-preview-grid">
+            <div v-for="(img, idx) in productData.gallery" :key="idx" class="gallery-item">
+              <img :src="img" alt="Gallery" />
+              <button class="remove-gallery-img" @click="removeGalleryImage(idx)">&times;</button>
+            </div>
+          </div>
+
+          <label class="custom-file-upload">
+            <input type="file" accept="image/*" multiple @change="handleMainImageUpload" class="file-input" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload Images
+          </label>
         </div>
       </div>
 
@@ -621,5 +658,105 @@ input:checked + .slider:before { transform: translateX(14px); }
 .bottom-action {
   padding-top: 24px;
   padding-bottom: 24px;
+}
+
+.image-upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.main-preview-box {
+  width: 100%;
+  height: 240px;
+  background: var(--wood-walnut);
+  border-radius: 16px;
+  border: 2px dashed var(--glass-border);
+  overflow: hidden;
+  position: relative;
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.upload-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.progress-text {
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.gallery-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
+}
+
+.gallery-item {
+  position: relative;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-gallery-img {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.custom-file-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  background: var(--wood-walnut);
+  border: 1px solid var(--accent-amber);
+  color: var(--text-amber);
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.custom-file-upload:hover {
+  background: var(--wood-polished);
+}
+
+.file-input {
+  display: none;
 }
 </style>

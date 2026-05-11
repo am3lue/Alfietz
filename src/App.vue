@@ -412,8 +412,8 @@ const handleUploadWork = async (data) => {
   loadingMessage.value = 'Weaving your work into the heritage...';
   try {
     await db.execute({
-      sql: 'INSERT INTO products (name, price, description, image, category_id, owner_id, status, variants_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      args: [data.name, data.price, data.description, data.image, data.category_id, userData.value.id, data.status, data.variants_json]
+      sql: 'INSERT INTO products (name, price, description, image, category_id, owner_id, status, variants_json, gallery_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      args: [data.name, data.price, data.description, data.image, data.category_id, userData.value.id, data.status, data.variants_json, data.gallery_json]
     });
     window.alert('Work published successfully!');
     await fetchInitialData();
@@ -684,11 +684,13 @@ const handleUpdateProfile = async (val) => {
     <!-- SHOP & EXPLORE PAGES -->
 <ProductDetails v-else-if="currentScreen === 'product-details'" 
       :product-id="selectedProduct?.id"
+      :current-user-id="userData.id"
       :t="t"
       @go-back="navigateTo('home')" 
       @go-reviews="navigateTo('reviews')"
       @go-feedback="navigateTo('feedback')"
       @toggle-favorite="(p) => toggleLike(p)"
+      @delete="handleProductDelete"
     />
     <ExploreMore v-else-if="currentScreen === 'explore'" 
       :category="selectedCategory"
