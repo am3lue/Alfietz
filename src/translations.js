@@ -116,6 +116,13 @@ export const translations = {
     stats: "Takwimu",
     accountType: "Aina ya Akaunti",
     heritageJourney: "Safari Yangu ya Urithi",
-    salesAndOrders: "Mauzo na Oda"
+    salesAndOrders: "Mauzo na Oda",
+    safetyTips: "Vidokezo vya Usalama",
+    measurementsGuide: "Mwongozo wa Vipimo",
+    ipPolicy: "Haki Miliki",
+    returnPolicy: "Sera ya Kurudisha",
+    communityGuidelines: "Miongozo ya Jamii",
+    linkCopied: "Kiungo kimepakiwa kwenye ubao!",
+    shareText: "Angalia bidhaa hii nzuri ya urithi kwenye Alfietz!"
   }
 };

@@ -262,4 +262,16 @@ defineEmits(['toggle-like', 'click'])
   color: white;
   transform: scale(0.95);
 }
+
+.heart-btn {
+  background-color: var(--wood-walnut) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+  transition: all 0.2s ease !important;
+}
+
+.heart-btn.liked {
+  border-color: var(--accent-amber) !important;
+  color: var(--accent-amber) !important;
+}
 </style>

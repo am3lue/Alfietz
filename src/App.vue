@@ -188,32 +188,19 @@ watch(selectedCategory, (val) => setStored('selected_category', val))
 const navigateTo = async (screenName, extraState = {}) => {
   if (extraState.selectedProduct) {
     selectedProduct.value = extraState.selectedProduct
-    try {
-      const res = await db.execute({
-        sql: `
-          SELECT r.*, u.first_name, u.last_name, u.avatar 
-          FROM reviews r 
-          JOIN users u ON r.user_id = u.id 
-          WHERE r.product_id = ?
-          ORDER BY r.created_at DESC
-        `,
-        args: [extraState.selectedProduct.id]
-      })
-      productReviews.value = res.rows.map(r => ({
-        id: r.id,
-        author: `${r.first_name} ${r.last_name}`,
-        rating: r.rating,
-        text: r.text,
-        time: 'Recently',
-        avatar: r.avatar
-      }))
-    } catch (e) {
-      console.error("Fetch reviews error:", e)
-      productReviews.value = []
-    }
+    router.push({ name: 'product-details', params: { id: extraState.selectedProduct.id } })
+    return
   }
-  if (extraState.selectedSeller) selectedSeller.value = extraState.selectedSeller
-  if (extraState.selectedCategory) selectedCategory.value = extraState.selectedCategory
+  if (extraState.selectedSeller) {
+    selectedSeller.value = extraState.selectedSeller
+    router.push({ name: 'tailor-details', params: { id: extraState.selectedSeller.id } })
+    return
+  }
+  if (extraState.selectedCategory) {
+    selectedCategory.value = extraState.selectedCategory
+    router.push({ name: 'explore', params: { category: extraState.selectedCategory } })
+    return
+  }
 
   router.push({ name: screenName })
 }
@@ -254,6 +241,13 @@ const showNavBar = computed(() => {
   return ['home', 'favorites', 'profile', 'category-list'].includes(currentScreen.value)
 })
 
+
+const toast = ref({ show: false, message: '', type: 'success' })
+const showToast = (message, type = 'success') => {
+  toast.value = { show: true, message, type }
+  setTimeout(() => { toast.value.show = false }, 3000)
+}
+
 // ==========================================
 // 3. ACTION HANDLERS
 // ==========================================
@@ -284,7 +278,7 @@ const handleLogin = async (data) => {
       await fetchInitialData();
       navigateTo('home');
     } else {
-      window.alert('User not found. Please sign up.');
+      showToast('User not found. Please sign up.', 'error')
     }
   } catch (e) {
     console.error('Login error:', e);
@@ -308,7 +302,7 @@ const handleSignUp = async (data) => {
     navigateTo('home');
   } catch (e) {
     console.error('Signup DB error:', e);
-    window.alert('Error signing up. Email or username might be taken.');
+    showToast('Error signing up. Email or username might be taken.', 'error')
   } finally {
     isGlobalLoading.value = false;
   }
@@ -322,7 +316,7 @@ const handleUploadWork = async (data) => {
       sql: 'INSERT INTO products (name, price, description, image, category_id, owner_id, status, variants_json, gallery_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       args: [data.name, data.price, data.description, data.image, data.category_id, userData.value.id, data.status, data.variants_json, data.gallery_json]
     });
-    window.alert('Work published successfully!');
+    showToast('Work published successfully!', 'success')
     await fetchInitialData();
     navigateTo('profile');
   } catch (e) {
@@ -340,7 +334,7 @@ const handleFeedback = async (msg) => {
       sql: 'INSERT INTO feedback (user_id, message) VALUES (?, ?)',
       args: [userData.value.id, msg]
     });
-    window.alert('Heritage feedback received! Thank you.');
+    showToast('Heritage feedback received! Thank you.', 'success')
     navigateTo('settings');
   } catch (e) {
     console.error('Feedback error:', e);
@@ -361,12 +355,12 @@ const handleProductDelete = async (productId) => {
       sql: "DELETE FROM products WHERE id = ? AND owner_id = ?",
       args: [productId, userData.value.id]
     })
-    window.alert('Item removed successfully.')
+    showToast('Item removed successfully.', 'success')
     await fetchInitialData()
     navigateTo('home')
   } catch (e) {
     console.error('Delete product error:', e)
-    window.alert('Error deleting item. Please try again.')
+    showToast('Error deleting item. Please try again.', 'error')
   } finally {
     isGlobalLoading.value = false;
   }
@@ -382,10 +376,10 @@ const handleUpdateRole = async (newRole) => {
       args: [newRole, userData.value.id]
     })
     userData.value.userType = newRole
-    window.alert(`Role successfully switched to ${newRole === 'supplier' ? 'Tailor' : 'Buyer'}!`)
+    showToast(`Role successfully switched to ${newRole === 'supplier' ? 'Tailor' : 'Buyer'}!`, 'success')
   } catch (e) {
     console.error('Role update error:', e)
-    window.alert('Error switching roles. Please try again.')
+    showToast('Error switching roles. Please try again.', 'error')
   } finally {
     isGlobalLoading.value = false
   }
@@ -449,12 +443,12 @@ const handleUpdateProfile = async (val) => {
       args: [val.username, val.firstName, val.lastName, val.whatsapp, val.avatar, val.userType, val.needs, val.gives, val.id]
     });
     userData.value = { ...val };
-    window.alert('Profile updated successfully!');
+    showToast('Profile updated successfully!', 'success')
     await fetchInitialData();
     navigateTo('profile');
   } catch (e) {
     console.error('Update profile error:', e);
-    window.alert('Failed to update profile. Username might be taken.');
+    showToast('Failed to update profile. Username might be taken.', 'error')
   } finally {
     isGlobalLoading.value = false;
   }
@@ -539,6 +533,12 @@ const handleGoBack = () => router.back()
           @go-privacy="navigateTo('privacy')"
           @go-terms="navigateTo('terms')"
           @go-about="navigateTo('about')"
+          @go-returns="navigateTo('returns')"
+          @go-guidelines="navigateTo('guidelines')"
+          @go-safety="navigateTo('safety')"
+          @go-measurements="navigateTo('measurements')"
+          @go-ip-policy="navigateTo('ip-policy')"
+          @go-stories="navigateTo('stories')"
           @upload="handleUploadWork"
         />
       </keep-alive>
@@ -551,11 +551,52 @@ const handleGoBack = () => router.back()
       @navigate="navigateTo"
     />
 
+    
     <LoadingSpinner v-if="isGlobalLoading" :message="loadingMessage" />
+
+    <!-- Modern Toast Notification -->
+    <div v-if="toast.show" class="toast-notification animate-fade-up" :class="toast.type">
+      <div class="toast-icon">
+        <svg v-if="toast.type === 'success'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <span class="toast-message">{{ toast.message }}</span>
+    </div>
   </div>
 </template>
 
+
 <style>
+/* Toast Notification */
+.toast-notification {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: 100px;
+  background: var(--wood-deep);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  z-index: 9999;
+  min-width: 280px;
+  max-width: 90vw;
+}
+.toast-notification.success { border-color: #10B981; }
+.toast-notification.error { border-color: #EF4444; }
+.toast-notification.success .toast-icon { color: #10B981; }
+.toast-notification.error .toast-icon { color: #EF4444; }
+.toast-message { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.animate-fade-up { animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
 .app-wrapper {
   width: 100%;
   max-width: 1440px;

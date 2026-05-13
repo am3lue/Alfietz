@@ -108,6 +108,19 @@ watch(searchQuery, (newVal) => {
       </div>
     </section>
 
+    <!-- Heritage Stories Preview Banner -->
+    <section class="stories-banner" @click="$emit('go-stories')">
+      <div class="banner-content">
+        <span class="banner-tag">New Story</span>
+        <h3>The Silent Language of Kente</h3>
+        <p>Discover how every thread weaves a tale of royalty...</p>
+        <span class="read-link">Read Heritage Stories →</span>
+      </div>
+      <div class="banner-image">
+        <img src="https://images.unsplash.com/photo-1582738411706-bfc8e691d1c2?q=80&w=400" alt="Kente Story" />
+      </div>
+    </section>
+
     <!-- Categories Section -->
     <section class="section">
       <SectionHeader title="Categories" @view-all="$emit('go-categories')" />
@@ -564,20 +577,37 @@ watch(searchQuery, (newVal) => {
 }
 
 /* Scrolling & Grids */
+
+/* Scrolling & Grids */
 .scroll-container {
   display: flex;
   gap: 16px;
   overflow-x: auto;
-  padding: 4px 4px 16px 4px; /* Added padding to prevent shadow clipping */
+  padding: 4px 4px 24px 4px; /* Added padding to prevent shadow clipping */
   margin: -4px -4px 0 -4px;
-  scrollbar-width: none;
   -webkit-overflow-scrolling: touch; /* Momentum scrolling on iOS */
   scroll-snap-type: x proximity; /* Subtle snapping for better feel */
+  
+  /* Desktop scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-amber) var(--wood-deep);
 }
 
 .scroll-container::-webkit-scrollbar {
-  display: none;
+  height: 8px;
 }
+
+.scroll-container::-webkit-scrollbar-track {
+  background: var(--wood-deep);
+  border-radius: 4px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  background-color: var(--accent-amber);
+  border-radius: 4px;
+  border: 2px solid var(--wood-deep);
+}
+
 
 .scroll-container :deep(.product-card) {
   width: 280px;
@@ -649,5 +679,68 @@ watch(searchQuery, (newVal) => {
   .explore-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+.stories-banner {
+  margin: 0 20px 40px 20px;
+  background: linear-gradient(135deg, var(--wood-polished), var(--wood-deep));
+  border-radius: 24px;
+  border: 1px solid var(--glass-border);
+  display: flex;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.stories-banner:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-amber);
+}
+
+.banner-content {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.banner-tag {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin-bottom: 8px;
+}
+
+.banner-content h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.banner-content p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.read-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-amber);
+}
+
+.banner-image {
+  width: 35%;
+  overflow: hidden;
+}
+
+.banner-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 </style>

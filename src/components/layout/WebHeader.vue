@@ -1,5 +1,7 @@
 <!-------- (WebHeader.vue) ./src/components/layout/WebHeader.vue ------------>
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
+
 defineProps({
   activeTab: {
     type: String,
@@ -16,10 +18,24 @@ defineProps({
 })
 
 defineEmits(['navigate', 'go-notifications', 'toggle-theme'])
+
+const isScrolled = ref(false)
+
+const handleScroll = () => {
+  isScrolled.value = window.scrollY > 10
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <template>
-  <header class="web-header">
+  <header class="web-header" :class="{ 'scrolled': isScrolled }">
     <div class="header-content">
       <!-- Logo area - Restored with Original Logo + Ancestral Glow -->
       <div class="logo" @click="$emit('navigate', 'home')">
@@ -76,29 +92,49 @@ defineEmits(['navigate', 'go-notifications', 'toggle-theme'])
 
 <style scoped>
 .web-header {
-  background-color: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--glass-border);
   position: sticky;
   top: 0;
   z-index: 1000;
   width: 100%;
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-border);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.web-header.scrolled {
+  margin: 12px auto;
+  width: calc(100% - 24px);
+  max-width: 1400px;
+  border-radius: 24px;
+  background-color: rgba(42, 24, 16, 0.75); /* Glassy brown */
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  top: 12px;
 }
 
 .header-content {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 0 12px; /* Tighter padding for small mobile */
-  height: 60px;    /* Slightly shorter */
+  padding: 0 12px; 
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transition: height 0.4s ease;
+}
+
+.web-header.scrolled .header-content {
+  height: 64px;
 }
 
 @media (min-width: 768px) {
   .header-content {
     padding: 0 24px;
     height: 80px;
+  }
+  .web-header.scrolled .header-content {
+    height: 72px;
   }
 }
 

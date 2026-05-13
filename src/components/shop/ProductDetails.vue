@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, h } from 'vue'
 import SectionHeader from '../layout/SectionHeader.vue'
 import { db } from '../../db/client'
+import { useRoute } from 'vue-router'
 
 const props = defineProps({
   productId: {
@@ -24,13 +25,22 @@ const props = defineProps({
 
 const emit = defineEmits(['go-back', 'go-reviews', 'go-feedback', 'toggle-favorite', 'delete'])
 
+const route = useRoute()
+
 // Hexagon SVG Component for Tech Vibe
 const Hexagon = {
-  template: `
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2l8.66 5v10L12 22l-8.66-5V7L12 2z"/>
-    </svg>
-  `
+  render() {
+    return h('svg', {
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': '1.5',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round'
+    }, [
+      h('path', { d: 'M12 2l8.66 5v10L12 22l-8.66-5V7L12 2z' })
+    ])
+  }
 }
 
 const product = ref(null)
@@ -55,7 +65,13 @@ const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Custom Size']
 onMounted(async () => {
   try {
     loading.value = true
+    const activeId = route.params.id || props.productId
     
+    if (!activeId) {
+      error.value = 'Product ID missing'
+      return
+    }
+
     // Fetch full product + seller info
     const prodRes = await db.execute({
       sql: `
@@ -70,7 +86,7 @@ onMounted(async () => {
         LEFT JOIN categories c ON p.category_id = c.id 
         WHERE p.id = ?
       `,
-      args: [props.productId]
+      args: [activeId]
     })
     
     if (prodRes.rows.length === 0) {
@@ -230,6 +246,25 @@ const connectToWhatsApp = (withOffer = false) => {
 const handleDelete = () => {
   if (confirm('Are you sure you want to delete this heritage item? This action cannot be undone.')) {
     emit('delete', product.value.id)
+  }
+}
+
+const shareProduct = async () => {
+  const shareData = {
+    title: `Alfietz - ${product.value.name}`,
+    text: `Check out this incredible heritage piece: "${product.value.name}" on Alfietz!`,
+    url: window.location.href
+  }
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData)
+    } else {
+      await navigator.clipboard.writeText(window.location.href)
+      alert('Link copied to heritage clipboard! Share it with your tribe.')
+    }
+  } catch (err) {
+    console.error('Sharing failed:', err)
   }
 }
 </script>
@@ -416,19 +451,25 @@ const handleDelete = () => {
       </div>
 
       <!-- Default Actions -->
-      <div v-else class="action-grid animate-fade">
-        <button class="negotiate-btn" @click="isNegotiating = true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
-          Negotiate
-        </button>
-        <button 
-          class="connect-btn" 
-          :class="{ disabled: !currentVariant.inStock || product.status === 'Out of Stock' }"
-          @click="connectToWhatsApp(false)"
-        >
-          {{ !currentVariant.inStock || product.status === 'Out of Stock' ? 'Currently Unavailable' : 'Order via WhatsApp' }}
-          <svg v-if="currentVariant.inStock && product.status !== 'Out of Stock'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.79 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-        </button>
+      <div v-else class="action-wrapper animate-fade">
+        <p class="direct-trade-disclaimer">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Direct trade via WhatsApp. REBi Group is not liable for off-platform payments.
+        </p>
+        <div class="action-grid">
+          <button class="negotiate-btn" @click="isNegotiating = true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+            Negotiate
+          </button>
+          <button 
+            class="connect-btn" 
+            :class="{ disabled: !currentVariant.inStock || product.status === 'Out of Stock' }"
+            @click="connectToWhatsApp(false)"
+          >
+            {{ !currentVariant.inStock || product.status === 'Out of Stock' ? 'Currently Unavailable' : 'Order via WhatsApp' }}
+            <svg v-if="currentVariant.inStock && product.status !== 'Out of Stock'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.79 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -886,5 +927,29 @@ const handleDelete = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.back-btn {
+  background-color: var(--wood-walnut) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+  transition: all 0.2s ease !important;
+}
+
+.back-btn:hover {
+  background-color: var(--wood-polished) !important;
+  border-color: var(--accent-amber) !important;
+}
+
+.back-btn {
+  background-color: var(--wood-walnut) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+  transition: all 0.2s ease !important;
+}
+
+.back-btn:hover {
+  background-color: var(--wood-polished) !important;
+  border-color: var(--accent-amber) !important;
 }
 </style>
