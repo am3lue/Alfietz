@@ -9,6 +9,7 @@ import { useRouter, useRoute } from 'vue-router'
 import NavigationBar from './components/layout/NavigationBar.vue'
 import WebHeader from './components/layout/WebHeader.vue'
 import LoadingSpinner from './components/layout/LoadingSpinner.vue'
+import { Analytics } from '@vercel/analytics/vue'
 
 // i18n
 import { translations } from './translations'
@@ -465,6 +466,7 @@ const handleGoBack = () => router.back()
 </script>
 
 <template>
+  <Analytics />
   <div class="app-wrapper">
     <WebHeader 
       v-if="showNavBar" 
