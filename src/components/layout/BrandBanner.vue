@@ -134,7 +134,7 @@ defineProps({
   position: relative;
   width: 100px;
   height: 100px;
-  background: var(--wood-deep);
+  background: #FDFBF7;
   border-radius: 50%;
   padding: 16px;
   display: flex;
