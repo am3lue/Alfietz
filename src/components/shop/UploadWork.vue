@@ -551,7 +551,7 @@ ${productData.value.description}
   padding: 18px;
   font-size: 15px;
   color: var(--text-primary);
-  background: transparent;
+  background: var(--input-bg);
   outline: none;
   transition: all 0.2s ease;
   width: 100%; /* Ensure full width */
@@ -853,7 +853,7 @@ input:checked + .slider:before { transform: translateX(14px); }
   padding: 18px;
   font-size: 15px;
   color: var(--text-primary);
-  background: transparent;
+  background: var(--input-bg);
   width: 100%;
   outline: none;
   appearance: none;
@@ -866,7 +866,7 @@ input:checked + .slider:before { transform: translateX(14px); }
   padding: 18px;
   font-size: 15px;
   color: var(--text-primary);
-  background: transparent;
+  background: var(--input-bg);
   outline: none;
   min-height: 160px;
   resize: vertical;

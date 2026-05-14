@@ -2,6 +2,13 @@
 <script setup>
 import { ref } from 'vue'
 
+const props = defineProps({
+  t: {
+    type: Function,
+    required: true
+  }
+})
+
 const email = ref('')
 const errorMessage = ref('')
 
@@ -31,21 +38,21 @@ const handleSubmit = () => {
     </div>
 
     <div class="welcome-text">
-      <h1 class="tribe-title">Forgot</h1>
-      <h2 class="tribe-highlight">Password</h2>
+      <h1 class="tribe-title">{{ t('forgot') }}</h1>
+      <h2 class="tribe-highlight">{{ t('password') }}</h2>
     </div>
     
-    <p class="subtitle">Type your email, we will send you verification code via email</p>
+    <p class="subtitle">{{ t('forgotSubtitle') }}</p>
     
     <div class="form-container">
       <div class="input-group">
-        <label>Email address</label>
+        <label>{{ t('emailAddress') }}</label>
         <input type="email" v-model="email" placeholder="johncharles@gmail.com" />
       </div>
 
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
-      <button class="primary-btn" @click="handleSubmit">Continue</button>
+      <button class="primary-btn" @click="handleSubmit">{{ t('continue') }}</button>
     </div>
   </div>
 </template>

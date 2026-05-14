@@ -2,6 +2,13 @@
 <script setup>
 import { ref } from 'vue'
 
+const props = defineProps({
+  t: {
+    type: Function,
+    required: true
+  }
+})
+
 const showNewPassword = ref(false)
 const showConfirmPassword = ref(false)
 const newPassword = ref('')
@@ -37,17 +44,17 @@ const handleSubmit = () => {
     </div>
 
     <div class="welcome-text">
-      <h1 class="tribe-title">Reset</h1>
-      <h2 class="tribe-highlight">Password</h2>
+      <h1 class="tribe-title">{{ t('reset') }}</h1>
+      <h2 class="tribe-highlight">{{ t('password') }}</h2>
     </div>
     
-    <p class="subtitle">Create your new password to log in</p>
+    <p class="subtitle">{{ t('resetSubtitle') }}</p>
     
     <div class="form-container">
       <div class="input-group">
-        <label>New password</label>
+        <label>{{ t('newPasswordLabel') }}</label>
         <div class="pass-wrapper">
-          <input :type="showNewPassword ? 'text' : 'password'" v-model="newPassword" placeholder="New password" />
+          <input :type="showNewPassword ? 'text' : 'password'" v-model="newPassword" :placeholder="t('newPasswordLabel')" />
           <button class="eye-btn" @click="showNewPassword = !showNewPassword">
             <svg v-if="!showNewPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/><path d="m3 3 18 18"/></svg>
             <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -56,9 +63,9 @@ const handleSubmit = () => {
       </div>
 
       <div class="input-group">
-        <label>Confirm password</label>
+        <label>{{ t('confirmPassword') }}</label>
         <div class="pass-wrapper">
-          <input :type="showConfirmPassword ? 'text' : 'password'" v-model="confirmPassword" placeholder="Confirm password" />
+          <input :type="showConfirmPassword ? 'text' : 'password'" v-model="confirmPassword" :placeholder="t('confirmPassword')" />
           <button class="eye-btn" @click="showConfirmPassword = !showConfirmPassword">
             <svg v-if="!showConfirmPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/><path d="m3 3 18 18"/></svg>
             <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -68,7 +75,7 @@ const handleSubmit = () => {
 
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
-      <button class="primary-btn" @click="handleSubmit">Reset password</button>
+      <button class="primary-btn" @click="handleSubmit">{{ t('resetPasswordBtn') }}</button>
     </div>
   </div>
 </template>

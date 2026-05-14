@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs'
 // ==========================================
 // 1. IMPORT GLOBAL COMPONENTS
 // ==========================================
+import { SpeedInsights } from '@vercel/speed-insights/vue'
 import NavigationBar from './components/layout/NavigationBar.vue'
 import WebHeader from './components/layout/WebHeader.vue'
 import LoadingSpinner from './components/layout/LoadingSpinner.vue'
@@ -620,6 +621,7 @@ const handleGoChat = (userId) => {
           :results="searchResults"
           :notifications="userNotifications"
           :editing-product="selectedEditProduct"
+          :reset-email="resetEmail"
           
           @select-language="(lang) => currentLanguage = lang"
           @loaded="userData.id !== 'guest' ? navigateTo('home') : navigateTo('login')"
@@ -714,6 +716,8 @@ const handleGoChat = (userId) => {
       </div>
       <span class="toast-message">{{ toast.message }}</span>
     </div>
+
+    <SpeedInsights />
   </div>
 </template>
 
