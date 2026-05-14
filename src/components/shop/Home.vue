@@ -1,12 +1,14 @@
 <!-------- (Home.vue) ./src/components/shop/Home.vue ------------>
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import ProductCard from './ProductCard.vue'
 import SellerCard from './SellerCard.vue'
+import BrandBanner from '../layout/BrandBanner.vue'
 import SectionHeader from '../layout/SectionHeader.vue'
 import { CATEGORY_EXAMPLES_SIMPLE as categoryExamples } from '../../constants'
 
-defineProps({
+const props = defineProps({
+  t: { type: Function, required: true },
   categories: { type: Array, default: () => [] },
   trendingProducts: { type: Array, default: () => [] },
   trendingSellers: { type: Array, default: () => [] },
@@ -24,7 +26,6 @@ const handleSearch = () => {
 }
 
 // Live search as user types
-import { watch } from 'vue'
 let searchTimeout = null
 watch(searchQuery, (newVal) => {
   if (searchTimeout) clearTimeout(searchTimeout)
@@ -61,34 +62,8 @@ watch(searchQuery, (newVal) => {
       </div>
     </div>
 
-    <!-- HERO SECTION (Glassmorphic & Heritage Coded) -->
-    <section class="hero-section">
-      <div class="hero-fingerprint">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
-          <path d="M12 10c0-1.1.9-2 2-2s2 .9 2 2-2 3-2 3m0-3c0-3.3-2.7-6-6-6s-6 2.7-6 6c0 1.1.3 2.1.8 3M12 22v-3m0-4c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4zm0 8c-3.3 0-6-2.7-6-6v-1m0 0c0-1.1.9-2 2-2s2 .9 2 2-2 3-2 3"/>
-        </svg>
-      </div>
-      <div class="hero-content">
-        <h1 class="hero-title">Celebrating African Craftsmanship</h1>
-        <p class="hero-description">Where ancestral weaving techniques meet precision futuristic cuts. Discover heritage coded for the modern era.</p>
-        <button class="hero-cta-btn" @click="$emit('go-explore', 'Explore more')">
-          DISCOVER HERITAGE
-          <span class="btn-arrow">→</span>
-        </button>
-      </div>
-      
-      <!-- Abstract decorative element representing wood rings + digital signals -->
-      <div class="hero-visual">
-        <div class="ring ring-1"></div>
-        <div class="ring ring-2"></div>
-        <div class="ring ring-3"></div>
-        <div class="hexagon-inner">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-            <path d="M12 2l8.66 5v10L12 22l-8.66-5V7L12 2z"/>
-          </svg>
-        </div>
-      </div>
-    </section>
+    <!-- PREMIUM BRAND BANNER (Logo Focused) -->
+    <BrandBanner :t="t" @click="$emit('go-explore', 'Explore more')" />
 
     <!-- Featured Collections (Sleek Modules) -->
     <section class="section">
