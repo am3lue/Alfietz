@@ -2,6 +2,13 @@
 <script setup>
 import { ref } from 'vue'
 
+const props = defineProps({
+  t: {
+    type: Function,
+    required: true
+  }
+})
+
 const email = ref('')
 const errorMessage = ref('')
 
@@ -31,21 +38,21 @@ const handleSubmit = () => {
     </div>
 
     <div class="welcome-text">
-      <h1 class="tribe-title">Forgot</h1>
-      <h2 class="tribe-highlight">Password</h2>
+      <h1 class="tribe-title">{{ t('forgot') }}</h1>
+      <h2 class="tribe-highlight">{{ t('password') }}</h2>
     </div>
     
-    <p class="subtitle">Type your email, we will send you verification code via email</p>
+    <p class="subtitle">{{ t('forgotSubtitle') }}</p>
     
     <div class="form-container">
       <div class="input-group">
-        <label>Email address</label>
+        <label>{{ t('emailAddress') }}</label>
         <input type="email" v-model="email" placeholder="johncharles@gmail.com" />
       </div>
 
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
-      <button class="primary-btn" @click="handleSubmit">Continue</button>
+      <button class="primary-btn" @click="handleSubmit">{{ t('continue') }}</button>
     </div>
   </div>
 </template>
@@ -102,5 +109,29 @@ const handleSubmit = () => {
   font-size: 13px;
   font-weight: 600;
   text-align: center;
+}
+
+.back-btn {
+  background-color: var(--wood-walnut) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+  transition: all 0.2s ease !important;
+}
+
+.back-btn:hover {
+  background-color: var(--wood-polished) !important;
+  border-color: var(--accent-amber) !important;
+}
+
+.back-btn {
+  background-color: var(--wood-walnut) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+  transition: all 0.2s ease !important;
+}
+
+.back-btn:hover {
+  background-color: var(--wood-polished) !important;
+  border-color: var(--accent-amber) !important;
 }
 </style>

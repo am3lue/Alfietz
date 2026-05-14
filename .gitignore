@@ -23,10 +23,24 @@ dist-ssr
 *.sln
 *.sw?
 
-
-# Editing Files That Are just for local development
+# Environment Variables
 .env
 .env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# Temporary and local development files
 errors.json
 TODO.md
 reserve.vue
+tmp_app.vue
+weak.md
+trial.txt/
+
+# Database
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal

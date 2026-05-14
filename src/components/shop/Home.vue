@@ -1,12 +1,14 @@
 <!-------- (Home.vue) ./src/components/shop/Home.vue ------------>
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import ProductCard from './ProductCard.vue'
 import SellerCard from './SellerCard.vue'
+import BrandBanner from '../layout/BrandBanner.vue'
 import SectionHeader from '../layout/SectionHeader.vue'
 import { CATEGORY_EXAMPLES_SIMPLE as categoryExamples } from '../../constants'
 
-defineProps({
+const props = defineProps({
+  t: { type: Function, required: true },
   categories: { type: Array, default: () => [] },
   trendingProducts: { type: Array, default: () => [] },
   trendingSellers: { type: Array, default: () => [] },
@@ -24,7 +26,6 @@ const handleSearch = () => {
 }
 
 // Live search as user types
-import { watch } from 'vue'
 let searchTimeout = null
 watch(searchQuery, (newVal) => {
   if (searchTimeout) clearTimeout(searchTimeout)
@@ -41,47 +42,28 @@ watch(searchQuery, (newVal) => {
     <!-- Search Bar (Ancestral Tech Style) -->
     <div class="search-container">
       <div class="search-wrapper group">
-        <span class="search-icon" @click="handleSearch">🔍</span>
+        <button 
+          class="search-icon-btn" 
+          @click="handleSearch"
+          aria-label="Search"
+        >
+          🔍
+        </button>
         <input 
           type="text" 
           v-model="searchQuery" 
           placeholder="Search for cultural trends, fabrics, or artifacts..." 
           class="search-input" 
           @keyup.enter="handleSearch"
+          aria-label="Search input"
         />
         <!-- Futuristic scanner line effect on focus -->
         <div class="scanner-line-effect"></div>
       </div>
     </div>
 
-    <!-- HERO SECTION (Glassmorphic & Heritage Coded) -->
-    <section class="hero-section">
-      <div class="hero-fingerprint">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5">
-          <path d="M12 10c0-1.1.9-2 2-2s2 .9 2 2-2 3-2 3m0-3c0-3.3-2.7-6-6-6s-6 2.7-6 6c0 1.1.3 2.1.8 3M12 22v-3m0-4c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4zm0 8c-3.3 0-6-2.7-6-6v-1m0 0c0-1.1.9-2 2-2s2 .9 2 2-2 3-2 3"/>
-        </svg>
-      </div>
-      <div class="hero-content">
-        <h1 class="hero-title">Celebrating African Craftsmanship</h1>
-        <p class="hero-description">Where ancestral weaving techniques meet precision futuristic cuts. Discover heritage coded for the modern era.</p>
-        <button class="hero-cta-btn" @click="$emit('go-explore', 'Explore more')">
-          DISCOVER HERITAGE
-          <span class="btn-arrow">→</span>
-        </button>
-      </div>
-      
-      <!-- Abstract decorative element representing wood rings + digital signals -->
-      <div class="hero-visual">
-        <div class="ring ring-1"></div>
-        <div class="ring ring-2"></div>
-        <div class="ring ring-3"></div>
-        <div class="hexagon-inner">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-            <path d="M12 2l8.66 5v10L12 22l-8.66-5V7L12 2z"/>
-          </svg>
-        </div>
-      </div>
-    </section>
+    <!-- PREMIUM BRAND BANNER (Logo Focused) -->
+    <BrandBanner :t="t" @click="$emit('go-explore', 'Explore more')" />
 
     <!-- Featured Collections (Sleek Modules) -->
     <section class="section">
@@ -105,6 +87,19 @@ watch(searchQuery, (newVal) => {
             <p class="module-subtitle">Bold prints engineered for the city.</p>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- Heritage Stories Preview Banner -->
+    <section class="stories-banner" @click="$emit('go-stories')">
+      <div class="banner-content">
+        <span class="banner-tag">New Story</span>
+        <h3>The Silent Language of Kente</h3>
+        <p>Discover how every thread weaves a tale of royalty...</p>
+        <span class="read-link">Read Heritage Stories →</span>
+      </div>
+      <div class="banner-image">
+        <img src="https://images.unsplash.com/photo-1660695828374-4ff51ac9df5d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8a2VudGV8ZW58MHx8MHx8fDA%3D" alt="Kente Story" />
       </div>
     </section>
 
@@ -192,7 +187,7 @@ watch(searchQuery, (newVal) => {
 
 <style scoped>
 .home-container {
-  padding: 24px 24px 120px 24px;
+  padding: 24px 24px 40px 24px;
 }
 
 /* Search Bar (Ancestral Tech) */
@@ -217,10 +212,22 @@ watch(searchQuery, (newVal) => {
   box-shadow: 0 0 15px var(--accent-glow);
 }
 
-.search-icon {
+.search-icon-btn {
   margin-right: 14px;
-  opacity: 0.5;
+  background: none;
+  border: none;
   font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.search-icon-btn:hover {
+  opacity: 1;
 }
 
 .search-input {
@@ -255,7 +262,7 @@ watch(searchQuery, (newVal) => {
 /* HERO SECTION (Ancestral Tech) */
 .hero-section {
   position: relative;
-  background: linear-gradient(135deg, #1A110A 0%, #2A1810 100%);
+  background: linear-gradient(135deg, var(--wood-walnut) 0%, var(--wood-polished) 100%);
   border: 1px solid var(--glass-border);
   border-radius: 32px;
   padding: 40px;
@@ -298,7 +305,7 @@ watch(searchQuery, (newVal) => {
   line-height: 1.1;
   font-weight: 800;
   margin-bottom: 20px;
-  background: linear-gradient(to right, #FFFBEB, var(--accent-amber));
+  background: linear-gradient(to right, var(--text-primary), var(--accent-amber));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -417,6 +424,15 @@ watch(searchQuery, (newVal) => {
   border: 1px solid rgba(255,255,255,0.05);
   cursor: pointer;
   transition: all 0.3s ease;
+  background-color: var(--wood-deep);
+}
+
+.collection-module::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
+  z-index: 1;
 }
 
 .collection-module:hover {
@@ -424,11 +440,13 @@ watch(searchQuery, (newVal) => {
 }
 
 .collection-module.kente {
-  background: linear-gradient(135deg, #8B5A2B 0%, #3E2723 100%);
+  background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url("https://images.unsplash.com/photo-1660695828374-4ff51ac9df5d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8a2VudGV8ZW58MHx8MHx8fDA%3D");
+  background-size: cover;
+  background-position: center;
 }
 
 .collection-module.ankara {
-  background: linear-gradient(135deg, #4A3021 0%, #1A110A 100%);
+  background: linear-gradient(135deg, var(--wood-polished) 0%, var(--wood-walnut) 100%);
 }
 
 .module-tech-overlay {
@@ -439,6 +457,7 @@ watch(searchQuery, (newVal) => {
     linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
   background-size: 20px 20px;
   opacity: 0.2;
+  z-index: 1;
 }
 
 .module-content {
@@ -458,24 +477,24 @@ watch(searchQuery, (newVal) => {
   font-weight: 800;
   letter-spacing: 1px;
   padding: 4px 10px;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.6);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 6px;
   margin-bottom: 12px;
-  color: var(--text-amber);
+  color: #FBBF24; /* Hardcoded amber for consistency on dark overlay */
 }
 
 .module-title {
   font-size: 22px;
   font-weight: 800;
-  color: white;
+  color: white; /* Forced white for readability on dark gradient */
   margin-bottom: 4px;
 }
 
 .module-subtitle {
   font-size: 13px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255,255,255,0.8); /* Slightly brighter white for better contrast */
   opacity: 0;
   transition: opacity 0.3s ease 0.1s;
 }
@@ -496,7 +515,7 @@ watch(searchQuery, (newVal) => {
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-lg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
 }
 
 /* Add a subtle wood grain overlay via CSS */
@@ -516,13 +535,13 @@ watch(searchQuery, (newVal) => {
   position: relative;
   z-index: 2;
   text-align: center;
-  color: white;
+  color: var(--text-primary);
 }
 
 .teaser-label {
   display: inline-block;
   background: var(--accent-gold);
-  color: var(--text-primary);
+  color: var(--wood-deep);
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 11px;
@@ -552,7 +571,7 @@ watch(searchQuery, (newVal) => {
   font-size: 13px;
   font-weight: 600;
   color: var(--accent-gold);
-  border: 1px border rgba(251, 192, 45, 0.3);
+  border: 1px solid var(--accent-glow);
   padding: 8px 16px;
   border-radius: 8px;
   display: inline-block;
@@ -564,30 +583,73 @@ watch(searchQuery, (newVal) => {
 }
 
 /* Scrolling & Grids */
+
+/* Scrolling & Grids */
 .scroll-container {
   display: flex;
   gap: 16px;
   overflow-x: auto;
-  padding: 4px 4px 16px 4px; /* Added padding to prevent shadow clipping */
+  padding: 4px 4px 24px 4px; /* Added padding to prevent shadow clipping */
   margin: -4px -4px 0 -4px;
-  scrollbar-width: none;
   -webkit-overflow-scrolling: touch; /* Momentum scrolling on iOS */
   scroll-snap-type: x proximity; /* Subtle snapping for better feel */
+  
+  /* Desktop scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-amber) var(--wood-deep);
 }
 
 .scroll-container::-webkit-scrollbar {
-  display: none;
+  height: 8px;
 }
 
+.scroll-container::-webkit-scrollbar-track {
+  background: var(--wood-deep);
+  border-radius: 4px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  background-color: var(--accent-amber);
+  border-radius: 4px;
+  border: 2px solid var(--wood-deep);
+}
+
+
 .scroll-container :deep(.product-card) {
-  width: 280px;
+  width: 200px;
   flex-shrink: 0;
   scroll-snap-align: start;
+  flex-direction: column !important;
+  height: auto !important;
+  border-radius: 24px !important;
+}
+
+.scroll-container :deep(.image-wrapper) {
+  width: 100% !important;
+  height: 200px !important;
+  border-radius: 24px 24px 0 0 !important;
+}
+
+.scroll-container :deep(.product-details) {
+  padding: 16px !important;
+  gap: 12px !important;
+}
+
+.scroll-container :deep(.product-name) {
+  font-size: 13px !important;
+  -webkit-line-clamp: 1 !important;
+}
+
+.scroll-container :deep(.price-row) {
+  margin-top: 0 !important;
 }
 
 @media (min-width: 768px) {
   .scroll-container :deep(.product-card) {
-    width: 340px;
+    width: 260px;
+  }
+  .scroll-container :deep(.image-wrapper) {
+    height: 260px !important;
   }
 }
 
@@ -635,19 +697,112 @@ watch(searchQuery, (newVal) => {
 
 .explore-grid {
   display: grid;
-  grid-template-columns: repeat(1, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
+}
+
+.explore-grid :deep(.product-card) {
+  flex-direction: column !important;
+  height: auto !important;
+  border-radius: 24px !important;
+}
+
+.explore-grid :deep(.image-wrapper) {
+  width: 100% !important;
+  height: 180px !important;
+  border-radius: 24px 24px 0 0 !important;
+}
+
+.explore-grid :deep(.product-details) {
+  padding: 12px !important;
+  gap: 8px !important;
+}
+
+.explore-grid :deep(.product-name) {
+  font-size: 13px !important;
+  -webkit-line-clamp: 1 !important;
+}
+
+.explore-grid :deep(.price-row) {
+  margin-top: 0 !important;
+}
+
+.explore-grid :deep(.add-btn) {
+  display: none !important;
 }
 
 @media (min-width: 768px) {
   .explore-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (min-width: 1280px) {
   .explore-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
+}
+
+.stories-banner {
+  margin: 0 0 40px 0;
+  background: linear-gradient(135deg, var(--wood-polished), var(--wood-deep));
+  border-radius: 24px;
+  border: 1px solid var(--glass-border);
+  display: flex;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.stories-banner:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-amber);
+}
+
+.banner-content {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.banner-tag {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin-bottom: 8px;
+}
+
+.banner-content h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.banner-content p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.read-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-amber);
+}
+
+.banner-image {
+  width: 35%;
+  overflow: hidden;
+}
+
+.banner-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 </style>
