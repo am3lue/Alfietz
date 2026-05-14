@@ -9,6 +9,7 @@ import { useRouter, useRoute } from 'vue-router'
 import NavigationBar from './components/layout/NavigationBar.vue'
 import WebHeader from './components/layout/WebHeader.vue'
 import LoadingSpinner from './components/layout/LoadingSpinner.vue'
+import { SpeedInsights } from '@vercel/speed-insights/vue'
 
 // i18n
 import { translations } from './translations'
@@ -630,6 +631,7 @@ const handleGoChat = (userId) => {
       </div>
       <span class="toast-message">{{ toast.message }}</span>
     </div>
+    <SpeedInsights />
   </div>
 </template>
 
