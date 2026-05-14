@@ -10,10 +10,12 @@ defineProps({
     default: 'eager'
   }
 })
+
+defineEmits(['click'])
 </script>
 
 <template>
-  <div class="seller-card">
+  <div class="seller-card" @click="$emit('click', seller)">
     <div class="avatar-wrapper">
       <img :src="seller.avatar" :alt="seller.name" class="seller-avatar" :loading="loading" />
       <div v-if="seller.isVerified" class="verify-badge">

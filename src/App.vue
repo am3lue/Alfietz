@@ -189,13 +189,21 @@ watch(selectedCategory, (val) => setStored('selected_category', val))
 
 const navigateTo = async (screenName, extraState = {}) => {
   if (extraState.selectedProduct) {
+    if (!extraState.selectedProduct.id) {
+      console.error('NavigateTo ERROR: Product object is missing id property', extraState.selectedProduct);
+      return;
+    }
     selectedProduct.value = extraState.selectedProduct
-    router.push({ name: 'product-details', params: { id: extraState.selectedProduct.id } })
+    router.push({ name: 'product-details', params: { id: extraState.selectedProduct.id.toString() } })
     return
   }
   if (extraState.selectedSeller) {
+    if (!extraState.selectedSeller.id) {
+      console.error('NavigateTo ERROR: Seller object is missing id property', extraState.selectedSeller);
+      return;
+    }
     selectedSeller.value = extraState.selectedSeller
-    router.push({ name: 'tailor-details', params: { id: extraState.selectedSeller.id } })
+    router.push({ name: 'tailor-details', params: { id: extraState.selectedSeller.id.toString() } })
     return
   }
   if (extraState.selectedCategory) {
@@ -208,6 +216,12 @@ const navigateTo = async (screenName, extraState = {}) => {
     selectedEditProduct.value = extraState.product || null
   } else {
     selectedEditProduct.value = null
+  }
+
+  // Prevent navigation to routes requiring params without params
+  if (['product-details', 'tailor-details', 'chat-detail'].includes(screenName)) {
+    console.error(`NavigateTo ERROR: Route "${screenName}" requires params but none were provided in state.`);
+    return;
   }
 
   router.push({ name: screenName })
@@ -500,6 +514,10 @@ const handleUpdateProfile = async (val) => {
 // Router Event Handlers Mapping
 const handleGoBack = () => router.back()
 const handleGoChat = (userId) => {
+  if (!userId) {
+    console.error('handleGoChat ERROR: userId is missing');
+    return;
+  }
   router.push({ name: 'chat-detail', params: { userId } })
 }
 </script>
