@@ -538,6 +538,7 @@ const handleGoChat = (userId) => {
           :results="searchResults"
           :notifications="userNotifications"
           :editing-product="selectedEditProduct"
+          :reset-email="resetEmail"
           
           @select-language="(lang) => currentLanguage = lang"
           @loaded="userData.id !== 'guest' ? navigateTo('home') : navigateTo('login')"
@@ -546,6 +547,7 @@ const handleGoChat = (userId) => {
           @go-forgot="navigateTo('forgot-password')"
           @go-back="handleGoBack"
           @login="handleLogin"
+          @signup="handleSignUp"
           @go-write-review="navigateTo('write-review')"
           @go-edit="(product) => navigateTo('upload-work', { product })"
           @submit="async (data) => {
