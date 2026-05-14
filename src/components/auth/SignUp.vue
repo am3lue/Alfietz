@@ -45,8 +45,13 @@ const validateForm = () => {
 }
 
 const handleSignUp = () => {
-  if (!validateForm()) return
+  console.log('[SignUp.vue] handleSignUp called');
+  if (!validateForm()) {
+    console.log('[SignUp.vue] Validation failed:', errorMessage.value);
+    return;
+  }
 
+  console.log('[SignUp.vue] Emitting signup event');
   emit('signup', {
     firstName: firstName.value,
     lastName: lastName.value,

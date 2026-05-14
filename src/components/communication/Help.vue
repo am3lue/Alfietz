@@ -5,7 +5,10 @@ const router = useRouter()
 defineEmits(['go-back'])
 
 const navigateTo = (routeName) => {
-  router.push({ name: routeName })
+  console.log(`[Help] Navigating to: ${routeName}`);
+  router.push({ name: routeName }).catch(err => {
+    console.error(`[Help] Navigation failed for ${routeName}:`, err);
+  });
 }
 </script>
 

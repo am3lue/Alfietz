@@ -30,7 +30,12 @@ export const db = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = { error: `Server responded with ${response.status}: ${await response.text()}` };
+        }
         throw new Error(errorData.error || `Server responded with ${response.status}`);
       }
 

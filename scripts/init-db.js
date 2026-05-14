@@ -1,5 +1,6 @@
 import { createClient } from "@libsql/client"
 import * as dotenv from 'dotenv'
+import bcrypt from 'bcryptjs'
 dotenv.config()
 
 const client = createClient({
@@ -122,10 +123,11 @@ async function init() {
 
     console.log("Tables created successfully.")
 
-    // 2.5 Insert Default Guest User
+    // 2.5 Insert Default Guest User with Hashed Password
+    const hashedPassword = await bcrypt.hash('password123', 10)
     await client.execute({
       sql: "INSERT INTO users (id, username, first_name, last_name, email, password, whatsapp, avatar, user_type, theme) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      args: ['guest', 'johnabram', 'John', 'Abram', 'johnabram@gmail.com', 'password123', '+255700000000', 'https://i.pravatar.cc/150?u=johnabram', 'buyer', 'light']
+      args: ['guest', 'johnabram', 'John', 'Abram', 'johnabram@gmail.com', hashedPassword, '+255700000000', 'https://i.pravatar.cc/150?u=johnabram', 'buyer', 'light']
     })
 
     // 2.6 Seed Initial Notifications

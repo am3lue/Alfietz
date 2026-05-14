@@ -7,11 +7,20 @@ export default async function handler(req, res) {
   }
 
   // Use environment variables (Secrets in Vercel)
-  const url = process.env.TURSO_URL;
-  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const url = process.env.TURSO_URL || process.env.VITE_TURSO_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN || process.env.VITE_TURSO_AUTH_TOKEN;
 
   if (!url || !authToken) {
-    return res.status(500).json({ error: 'Database configuration missing on server' });
+    console.error('Environment variables missing. Expected TURSO_URL and TURSO_AUTH_TOKEN.');
+    return res.status(500).json({ 
+      error: 'Database configuration missing on server',
+      debug: {
+        hasUrl: !!process.env.TURSO_URL,
+        hasViteUrl: !!process.env.VITE_TURSO_URL,
+        hasToken: !!process.env.TURSO_AUTH_TOKEN,
+        hasViteToken: !!process.env.VITE_TURSO_AUTH_TOKEN
+      }
+    });
   }
 
   const { sql, args } = req.body;
@@ -26,8 +35,20 @@ export default async function handler(req, res) {
       authToken: authToken,
     });
 
-    const result = await client.execute({ sql, args: args || [] });
-    return res.status(200).json(result);
+    const result = await client.execute({ sql: sql, args: args || [] });
+
+    // Explicitly convert Rows to plain objects for consistent JSON serialization
+    const rows = result.rows.map(row => {
+      const obj = {};
+      result.columns.forEach((col, i) => {
+        obj[col] = row[i];
+      });
+      return obj;
+    });
+
+    return res.status(200).json(JSON.parse(JSON.stringify({ ...result, rows }, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    )));
   } catch (error) {
     console.error('Database Proxy Error:', error);
     return res.status(500).json({ error: error.message || 'Internal Server Error' });

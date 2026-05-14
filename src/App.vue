@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { db } from './db/client'
 import { useRouter, useRoute } from 'vue-router'
+import bcrypt from 'bcryptjs'
 
 // ==========================================
 // 1. IMPORT GLOBAL COMPONENTS
@@ -87,13 +88,16 @@ const filteredExploreItems = computed(() => {
 })
 
 const fetchInitialData = async () => {
+  console.log('[Data] Fetching initial data...');
   try {
     if (userData.value.id !== 'guest') {
+      console.log('[Data] Fetching user details for:', userData.value.id);
       const userRes = await db.execute({
         sql: "SELECT * FROM users WHERE id = ?",
         args: [userData.value.id]
       })
-      if (userRes.rows.length > 0) {
+      console.log('[Data] User fetch result rows:', userRes.rows?.length);
+      if (userRes.rows && userRes.rows.length > 0) {
         const u = userRes.rows[0]
         userData.value = {
           id: u.id,
@@ -116,39 +120,49 @@ const fetchInitialData = async () => {
       sql: "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC",
       args: [userData.value.id]
     })
-    userNotifications.value = notifRes.rows.map(n => ({ id: n.id, name: n.message, time: 'Just now', unread: !!n.is_unread }))
+    userNotifications.value = (notifRes.rows || []).map(n => ({ id: n.id, name: n.message, time: 'Just now', unread: !!n.is_unread }))
 
     const favRes = await db.execute({
       sql: "SELECT product_id FROM favorites WHERE user_id = ?",
       args: [userData.value.id]
     })
-    const favoriteIds = favRes.rows.map(f => f.product_id)
+    const favoriteIds = (favRes.rows || []).map(f => f.product_id)
 
     const statsRes = await db.execute({
       sql: "SELECT COUNT(*) as total FROM products WHERE owner_id = ?",
       args: [userData.value.id]
     })
-    userProductCount.value = statsRes.rows[0].total
+    userProductCount.value = statsRes.rows?.[0]?.total || 0
 
+    console.log('[Data] Fetching categories...');
     const cats = await db.execute("SELECT * FROM categories")
-    categories.value = cats.rows
+    console.log('[Data] Raw categories sample:', cats.rows?.[0]);
+    categories.value = cats.rows || []
 
+    console.log('[Data] Fetching products...');
     const products = await db.execute("SELECT * FROM products ORDER BY likes_count DESC")
-    allProducts.value = products.rows.map(p => ({ ...p, liked: favoriteIds.includes(p.id) }))
+    console.log('[Data] Raw products sample:', products.rows?.[0]);
+    
+    allProducts.value = (products.rows || []).map(p => ({ ...p, liked: favoriteIds.includes(p.id) }))
     favoriteItems.value = allProducts.value.filter(p => p.liked)
     
     trendingProducts.value = allProducts.value.slice(0, 4)
     exploreItems.value = [...allProducts.value].sort(() => 0.5 - Math.random()).slice(0, 6)
 
+    console.log('[Data] Fetching sellers...');
     const sellers = await db.execute("SELECT * FROM sellers ORDER BY rating DESC, likes_count DESC, clients_count DESC")
-    trendingSellers.value = sellers.rows.map(s => ({ 
+    console.log('[Data] Raw sellers sample:', sellers.rows?.[0]);
+    
+    trendingSellers.value = (sellers.rows || []).map(s => ({ 
       ...s, 
       isVerified: !!s.is_verified,
       likesCount: s.likes_count,
       clientsCount: s.clients_count
     }))
+    
+    console.log('[Data] Data load complete. Products found:', allProducts.value.length);
   } catch (e) {
-    console.error("Database fetch error:", e)
+    console.error("[Data] Database fetch error:", e)
   }
 }
 
@@ -188,13 +202,21 @@ watch(selectedProduct, (val) => setStored('selected_product', val), { deep: true
 watch(selectedCategory, (val) => setStored('selected_category', val))
 
 const navigateTo = async (screenName, extraState = {}) => {
+  if (!screenName && !extraState.selectedProduct && !extraState.selectedSeller && !extraState.selectedCategory) {
+    console.warn('[NavigateTo] Warning: screenName is missing and no specific entity navigation was requested.');
+    return;
+  }
+  console.log(`[NavigateTo] Target: ${screenName}`, extraState);
+
   if (extraState.selectedProduct) {
     if (!extraState.selectedProduct.id) {
       console.error('NavigateTo ERROR: Product object is missing id property', extraState.selectedProduct);
       return;
     }
     selectedProduct.value = extraState.selectedProduct
-    router.push({ name: 'product-details', params: { id: extraState.selectedProduct.id.toString() } })
+    const id = extraState.selectedProduct.id.toString();
+    console.log(`[NavigateTo] Going to product: ${id}`);
+    router.push({ name: 'product-details', params: { id } })
     return
   }
   if (extraState.selectedSeller) {
@@ -203,11 +225,14 @@ const navigateTo = async (screenName, extraState = {}) => {
       return;
     }
     selectedSeller.value = extraState.selectedSeller
-    router.push({ name: 'tailor-details', params: { id: extraState.selectedSeller.id.toString() } })
+    const id = extraState.selectedSeller.id.toString();
+    console.log(`[NavigateTo] Going to tailor: ${id}`);
+    router.push({ name: 'tailor-details', params: { id } })
     return
   }
   if (extraState.selectedCategory) {
     selectedCategory.value = extraState.selectedCategory
+    console.log(`[NavigateTo] Going to explore category: ${extraState.selectedCategory}`);
     router.push({ name: 'explore', params: { category: extraState.selectedCategory } })
     return
   }
@@ -224,7 +249,10 @@ const navigateTo = async (screenName, extraState = {}) => {
     return;
   }
 
-  router.push({ name: screenName })
+  console.log(`[NavigateTo] Pushing route name: ${screenName}`);
+  router.push({ name: screenName }).catch(err => {
+    console.error(`[Router] Push failed for ${screenName}:`, err);
+  });
 }
 
 const toggleLike = async (product) => {
@@ -274,6 +302,7 @@ const showToast = (message, type = 'success') => {
 // 3. ACTION HANDLERS
 // ==========================================
 const handleLogin = async (data) => {
+  console.log('[Auth] Login attempt for:', data.email);
   isGlobalLoading.value = true;
   loadingMessage.value = 'Authenticating with the Tribe...';
   try {
@@ -281,9 +310,22 @@ const handleLogin = async (data) => {
       sql: 'SELECT * FROM users WHERE email = ?',
       args: [data.email]
     });
+    console.log('[Auth] DB Response rows:', res.rows?.length);
+
     if (res.rows.length > 0) {
       const u = res.rows[0];
-      if (u.password === data.password) {
+      // Try bcrypt compare, fallback to plain text for legacy users (first migration)
+      let isMatch = false;
+      try {
+        console.log('[Auth] Comparing passwords with bcrypt...');
+        isMatch = await bcrypt.compare(data.password, u.password);
+        console.log('[Auth] Bcrypt match:', isMatch);
+      } catch (e) {
+        console.log('[Auth] Bcrypt compare failed, trying plain text fallback');
+        isMatch = u.password === data.password;
+      }
+
+      if (isMatch) {
         userData.value = {
           id: u.id,
           username: u.username,
@@ -298,6 +340,7 @@ const handleLogin = async (data) => {
           theme: u.theme || 'light'
         };
         theme.value = u.theme || 'light';
+        console.log('[Auth] Login success, fetching initial data');
         await fetchInitialData();
         navigateTo('home');
       } else {
@@ -307,27 +350,49 @@ const handleLogin = async (data) => {
       showToast('User not found. Please sign up.', 'error')
     }
   } catch (e) {
-    console.error('Login error:', e);
+    console.error('[Auth] Login error:', e);
+    showToast('Login failed. Please check your connection.', 'error')
   } finally {
     isGlobalLoading.value = false;
   }
 }
 
 const handleSignUp = async (data) => {
+  console.log('[Auth] SignUp attempt:', data);
   isGlobalLoading.value = true;
   loadingMessage.value = 'Joining the heritage...';
   const newId = 'u' + Date.now();
-  const signupData = { ...data, id: newId };
+  
   try {
-    await db.execute({
+    console.log('[Auth] Hashing password...');
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    console.log('[Auth] Password hashed successfully');
+
+    const signupData = { ...data, id: newId, password: hashedPassword };
+    
+    console.log('[Auth] Executing DB insert...');
+    const res = await db.execute({
       sql: 'INSERT INTO users (id, username, first_name, last_name, email, password, whatsapp, avatar, user_type, needs, gives, theme) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       args: [signupData.id, signupData.username, signupData.firstName, signupData.lastName, signupData.email, signupData.password, signupData.whatsapp, signupData.avatar, signupData.userType, signupData.needs, signupData.gives, 'light']
     });
+    
+    // Check if we have rows or result to confirm success even if serializing BigInt failed later
+    console.log('[Auth] DB insert response received');
+
     userData.value = signupData;
+    console.log('[Auth] User data set locally, fetching initial data');
     await fetchInitialData();
     navigateTo('home');
+    showToast('Welcome to the heritage!', 'success');
   } catch (e) {
-    console.error('Signup DB error:', e);
+    console.error('[Auth] Signup DB error:', e);
+    // If the error is JUST the BigInt serialization but the user was likely created
+    if (e.message.includes('BigInt')) {
+       userData.value = signupData;
+       await fetchInitialData();
+       navigateTo('home');
+       return;
+    }
     showToast('Error signing up. Email or username might be taken.', 'error')
   } finally {
     isGlobalLoading.value = false;
@@ -563,6 +628,7 @@ const handleGoChat = (userId) => {
           @go-forgot="navigateTo('forgot-password')"
           @go-back="handleGoBack"
           @login="handleLogin"
+          @signup="handleSignUp"
           @go-write-review="navigateTo('write-review')"
           @go-edit="(product) => navigateTo('upload-work', { product })"
           @submit="async (data) => {

@@ -157,7 +157,7 @@ watch(searchQuery, (newVal) => {
           :key="product.id" 
           :product="product" 
           loading="lazy"
-          @click="$emit('go-details', product)"
+          @select="$emit('go-details', product)"
           @toggle-like="(p) => $emit('toggle-like', p)"
         />
       </div>
@@ -172,7 +172,7 @@ watch(searchQuery, (newVal) => {
           :key="seller.id" 
           :seller="seller" 
           loading="lazy"
-          @click="$emit('go-tailor', seller)"
+          @select="$emit('go-tailor', seller)"
         />
       </div>
     </section>
@@ -186,7 +186,7 @@ watch(searchQuery, (newVal) => {
           :key="item.id" 
           :product="item" 
           loading="lazy"
-          @click="$emit('go-details', item)"
+          @select="$emit('go-details', item)"
           @toggle-like="(p) => $emit('toggle-like', p)"
         />
       </div>

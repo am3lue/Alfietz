@@ -26,7 +26,7 @@ defineEmits(['go-back', 'go-details', 'toggle-like'])
         v-for="item in results" 
         :key="item.id" 
         :product="item" 
-        @click="$emit('go-details', item)"
+        @select="$emit('go-details', item)"
         @toggle-like="(p) => $emit('toggle-like', p)"
       />
     </div>
