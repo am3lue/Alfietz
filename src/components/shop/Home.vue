@@ -757,7 +757,7 @@ watch(searchQuery, (newVal) => {
 }
 
 .stories-banner {
-  margin: 0 20px 40px 20px;
+  margin: 0 0 40px 0;
   background: linear-gradient(135deg, var(--wood-polished), var(--wood-deep));
   border-radius: 24px;
   border: 1px solid var(--glass-border);
