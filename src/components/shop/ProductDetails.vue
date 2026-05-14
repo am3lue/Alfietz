@@ -506,7 +506,7 @@ const shareProduct = async () => {
               :product="item" 
               loading="lazy"
               class="similar-card"
-              @click="$emit('go-details', item)"
+              @select="$emit('go-details', item)"
               @toggle-like="(p) => $emit('toggle-favorite', p)"
             />
           </div>

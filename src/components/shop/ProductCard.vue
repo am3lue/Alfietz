@@ -12,11 +12,11 @@ defineProps({
   }
 })
 
-defineEmits(['toggle-like', 'click'])
+defineEmits(['toggle-like', 'select'])
 </script>
 
 <template>
-  <div class="product-card group" @click="$emit('click')">
+  <div class="product-card group" @click="$emit('select', product)">
     <!-- Image Box -->
     <div class="image-wrapper">
       <img :src="product.image" :alt="'Photo of ' + product.name" class="product-img" :loading="loading" />

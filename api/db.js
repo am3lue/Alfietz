@@ -35,8 +35,20 @@ export default async function handler(req, res) {
       authToken: authToken,
     });
 
-    const result = await client.execute({ sql, args: args || [] });
-    return res.status(200).json(result);
+    const result = await client.execute({ sql: sql, args: args || [] });
+
+    // Explicitly convert Rows to plain objects for consistent JSON serialization
+    const rows = result.rows.map(row => {
+      const obj = {};
+      result.columns.forEach((col, i) => {
+        obj[col] = row[i];
+      });
+      return obj;
+    });
+
+    return res.status(200).json(JSON.parse(JSON.stringify({ ...result, rows }, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    )));
   } catch (error) {
     console.error('Database Proxy Error:', error);
     return res.status(500).json({ error: error.message || 'Internal Server Error' });

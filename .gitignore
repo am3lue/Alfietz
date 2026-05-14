@@ -35,12 +35,5 @@ dist-ssr
 errors.json
 TODO.md
 reserve.vue
-tmp_app.vue
-weak.md
-trial.txt/
-
-# Database
-*.sqlite
-*.sqlite-journal
-*.sqlite-shm
-*.sqlite-wal
+.vercel
+.env*.local

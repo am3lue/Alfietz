@@ -49,7 +49,9 @@ const router = createRouter({
 })
 
 // Navigation Guard
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
+  console.log(`[Router] Navigating to: ${to.name}`, to.params);
+  
   const STORAGE_KEY_PREFIX = 'alfie_app_'
   const storedUser = localStorage.getItem(STORAGE_KEY_PREFIX + 'user_data')
   let userData = { id: 'guest' }
@@ -72,11 +74,9 @@ router.beforeEach((to, from, next) => {
   ]
 
   if (authRoutes.includes(to.name) && isGuest) {
-    next({ name: 'login' })
+    return { name: 'login' }
   } else if (['login', 'signup', 'splash'].includes(to.name) && !isGuest) {
-    next({ name: 'home' })
-  } else {
-    next()
+    return { name: 'home' }
   }
 })
 
