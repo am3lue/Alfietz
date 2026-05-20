@@ -64,16 +64,18 @@ const userData = ref(getStored('user_data', {
   profileViews: 0
 }))
 
-const categories = ref([])
-const trendingProducts = ref([])
-const trendingSellers = ref([])
-const allProducts = ref([])
-const exploreItems = ref([])
+const categories = ref(getStored('categories_cache', []))
+const trendingProducts = ref(getStored('trending_products_cache', []))
+const trendingSellers = ref(getStored('trending_sellers_cache', []))
+const allProducts = ref(getStored('all_products_cache', []))
+const exploreItems = ref(getStored('explore_items_cache', []))
 const productReviews = ref([])
 const searchResults = ref([])
 const searchHistory = ref(getStored('search_history', []))
 const userNotifications = ref([])
 const userProductCount = ref(0)
+
+const isDeepLoading = ref(false)
 
 const selectedSeller = ref(getStored('selected_seller', null))
 const selectedCategory = ref(getStored('selected_category', 'Explore more'))
@@ -101,15 +103,15 @@ const updatePreference = (categoryId, weight = 1) => {
 }
 
 const fetchInitialData = async () => {
-  console.log('[Data] Fetching initial data...');
+  console.log('[SpeedDemon] Phase 1: Fetching Core Data...');
   try {
+    // 1. User & Session Core
     if (userData.value.id !== 'guest') {
-      console.log('[Data] Fetching user details for:', userData.value.id);
       const userRes = await db.execute({
         sql: "SELECT * FROM users WHERE id = ?",
         args: [userData.value.id]
       })
-      if (userRes.rows && userRes.rows.length > 0) {
+      if (userRes.rows?.length > 0) {
         const u = userRes.rows[0]
         userData.value = {
           id: u.id,
@@ -132,46 +134,48 @@ const fetchInitialData = async () => {
       }
     }
 
-    const notifRes = await db.execute({
-      sql: "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC",
-      args: [userData.value.id]
-    })
-    userNotifications.value = (notifRes.rows || []).map(n => ({ id: n.id, name: n.message, time: 'Just now', unread: !!n.is_unread }))
+    // 2. Critical Home Data (Top 4 Products + Categories)
+    const [catRes, prodRes] = await Promise.all([
+      db.execute("SELECT * FROM categories"),
+      db.execute("SELECT * FROM products ORDER BY likes_count DESC LIMIT 4")
+    ])
+    
+    categories.value = catRes.rows || []
+    trendingProducts.value = prodRes.rows || []
+    
+    // Cache immediately for next visit
+    setStored('categories_cache', categories.value)
+    setStored('trending_products_cache', trendingProducts.value)
 
-    const favRes = await db.execute({
+    // BOOT COMPLETE - Clear spinner early
+    isGlobalLoading.value = false
+    console.log('[SpeedDemon] Phase 1 Complete. User can now peruse.');
+
+    // Phase 2: Deep Loading in Background
+    fetchDeepData()
+  } catch (e) {
+    console.error("[SpeedDemon] Phase 1 Error:", e)
+    isGlobalLoading.value = false
+  }
+}
+
+const fetchDeepData = async () => {
+  console.log('[SpeedDemon] Phase 2: Streaming deep data...');
+  isDeepLoading.value = true
+  try {
+    // 1. Full Product Catalog
+    const productsRes = await db.execute("SELECT * FROM products ORDER BY id DESC")
+    const favoriteIds = (await db.execute({
       sql: "SELECT product_id FROM favorites WHERE user_id = ?",
       args: [userData.value.id]
-    })
-    const favoriteIds = (favRes.rows || []).map(f => f.product_id)
+    })).rows.map(f => f.product_id)
 
-    const statsRes = await db.execute({
-      sql: "SELECT COUNT(*) as total FROM products WHERE owner_id = ?",
-      args: [userData.value.id]
-    })
-    userProductCount.value = statsRes.rows?.[0]?.total || 0
-
-    console.log('[Data] Fetching categories...');
-    const cats = await db.execute("SELECT * FROM categories")
-    categories.value = cats.rows || []
-
-    console.log('[Data] Fetching products...');
-    const products = await db.execute("SELECT * FROM products ORDER BY likes_count DESC")
-    allProducts.value = (products.rows || []).map(p => ({ ...p, liked: favoriteIds.includes(p.id) }))
+    allProducts.value = (productsRes.rows || []).map(p => ({ ...p, liked: favoriteIds.includes(p.id) }))
     favoriteItems.value = allProducts.value.filter(p => p.liked)
-    
-    // PERSONALIZED RANKING
-    const rankedProducts = [...allProducts.value].sort((a, b) => {
-      const scoreA = userPreferences.value[a.category_id] || 0
-      const scoreB = userPreferences.value[b.category_id] || 0
-      if (scoreA !== scoreB) return scoreB - scoreA
-      return (b.likes_count || 0) - (a.likes_count || 0)
-    })
+    setStored('all_products_cache', allProducts.value)
 
-    trendingProducts.value = rankedProducts.slice(0, 4)
-    exploreItems.value = rankedProducts.sort(() => 0.5 - Math.random()).slice(0, 6)
-
-    console.log('[Data] Fetching sellers...');
-    const sellers = await db.execute(`
+    // 2. Full Artisans
+    const sellersRes = await db.execute(`
       SELECT u.*, 
              (SELECT COUNT(*) FROM products WHERE owner_id = u.id) as posts_count,
              (SELECT COUNT(*) FROM orders WHERE tailor_id = u.id) as clients_count,
@@ -181,21 +185,33 @@ const fetchInitialData = async () => {
       WHERE u.user_type = 'supplier'
       ORDER BY clients_count DESC, likes_count DESC
     `)
-    trendingSellers.value = (sellers.rows || []).map(s => ({ 
+    trendingSellers.value = (sellersRes.rows || []).map(s => ({ 
       id: s.id,
       name: `${s.first_name} ${s.last_name}`,
       username: s.username,
       avatar: s.avatar,
       bio: s.gives,
-      isVerified: s.clients_count > 5, // Auto-verify after 5 orders
+      whatsapp: s.whatsapp,
+      isVerified: s.clients_count > 5,
       likesCount: s.likes_count || 0,
       clientsCount: s.clients_count || 0,
       rating: s.avg_rating ? parseFloat(s.avg_rating).toFixed(1) : '0.0'
     }))
-    
-    console.log('[Data] Data load complete. Products found:', allProducts.value.length);
+    setStored('trending_sellers_cache', trendingSellers.value)
+
+    // 3. Notifications & Stats
+    const [notifRes, statsRes] = await Promise.all([
+      db.execute({ sql: "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC", args: [userData.value.id] }),
+      db.execute({ sql: "SELECT COUNT(*) as total FROM products WHERE owner_id = ?", args: [userData.value.id] })
+    ])
+    userNotifications.value = (notifRes.rows || []).map(n => ({ id: n.id, name: n.message, time: 'Just now', unread: !!n.is_unread }))
+    userProductCount.value = statsRes.rows?.[0]?.total || 0
+
+    console.log('[SpeedDemon] Phase 2 Complete. Background data synced.');
   } catch (e) {
-    console.error("[Data] Database fetch error:", e)
+    console.error("[SpeedDemon] Phase 2 Error:", e)
+  } finally {
+    isDeepLoading.value = false
   }
 }
 
@@ -672,20 +688,26 @@ const handleLogout = () => {
   navigateTo('login');
 }
 
-const handleSearch = async (query) => {
-  if (!query.trim()) return
+const handleSearch = async (query, navigate = true) => {
+  if (!query.trim()) {
+    searchResults.value = { query: '', products: [], tailors: [] }
+    return
+  }
   
-  // Add to history
-  const history = [query, ...searchHistory.value.filter(h => h !== query)].slice(0, 5)
-  searchHistory.value = history
-  setStored('search_history', history)
+  if (navigate) {
+    const history = [query, ...searchHistory.value.filter(h => h !== query)].slice(0, 5)
+    searchHistory.value = history
+    setStored('search_history', history)
+    isGlobalLoading.value = true;
+    loadingMessage.value = 'Searching the heritage...';
+  }
 
-  isGlobalLoading.value = true;
-  loadingMessage.value = 'Searching the heritage...';
   try {
-    const q = `%${query.toLowerCase()}%`;
+    // Fuzzy logic: match parts of words and prioritize start-of-word matches
+    const exact = `${query.toLowerCase()}%`;
+    const fuzzy = `%${query.toLowerCase()}%`;
     
-    // 1. Search Products
+    // 1. Search Products (Enhanced Relevance)
     const prodRes = await db.execute({
       sql: `
         SELECT p.*, u.username as owner_username, c.name as category_name
@@ -693,19 +715,31 @@ const handleSearch = async (query) => {
         LEFT JOIN categories c ON p.category_id = c.id
         LEFT JOIN users u ON p.owner_id = u.id
         WHERE p.name LIKE ? OR p.description LIKE ? OR c.name LIKE ? OR p.material LIKE ?
-        ORDER BY p.likes_count DESC
+           OR p.name LIKE ? OR c.name LIKE ?
+        ORDER BY 
+          CASE 
+            WHEN p.name LIKE ? THEN 1 -- Exact start match
+            WHEN c.name LIKE ? THEN 2 -- Category start match
+            WHEN p.name LIKE ? THEN 3 -- Fuzzy match
+            ELSE 4
+          END ASC,
+          p.likes_count DESC
+        LIMIT ${navigate ? 50 : 8}
       `,
-      args: [q, q, q, q]
+      args: [exact, fuzzy, exact, fuzzy, fuzzy, fuzzy, exact, exact, fuzzy]
     });
 
-    // 2. Search Tailors
+    // 2. Search Tailors (Fuzzy)
     const tailorRes = await db.execute({
       sql: `
         SELECT id, username, first_name, last_name, avatar, gives as bio
         FROM users
-        WHERE user_type = 'supplier' AND (username LIKE ? OR first_name LIKE ? OR last_name LIKE ?)
+        WHERE user_type = 'supplier' AND (username LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR gives LIKE ?)
+        ORDER BY 
+          CASE WHEN username LIKE ? THEN 1 ELSE 2 END ASC
+        LIMIT ${navigate ? 20 : 4}
       `,
-      args: [q, q, q]
+      args: [fuzzy, fuzzy, fuzzy, fuzzy, exact]
     })
 
     let favoriteIds = [];
@@ -727,11 +761,13 @@ const handleSearch = async (query) => {
       }))
     }
     
-    navigateTo('search-results');
+    if (navigate) {
+      navigateTo('search-results');
+    }
   } catch (e) {
     console.error('Search error:', e);
   } finally {
-    isGlobalLoading.value = false;
+    if (navigate) isGlobalLoading.value = false;
   }
 }
 
@@ -805,6 +841,7 @@ const handleGoChat = (userId) => {
           :notifications="userNotifications"
           :editing-product="selectedEditProduct"
           :search-history="searchHistory"
+          :is-loading="isDeepLoading"
           
           @select-language="(lang) => currentLanguage = lang"
           @loaded="userData.id !== 'guest' ? navigateTo('home') : navigateTo('login')"

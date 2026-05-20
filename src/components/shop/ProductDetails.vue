@@ -298,20 +298,20 @@ const connectToWhatsApp = (withOffer = false) => {
   const buyerName = props.userData.firstName || props.userData.username
   const sellerName = product.value.sellerFirstName || product.value.sellerName
 
-  let message = `Jambo ${sellerName}! ✨\n\n`
-  message += `My name is ${buyerName}, and I'm absolutely in love with your piece "${product.value.name}" on Alfietz! 😍\n\n`
+  let message = `Habari ${sellerName}! ✨\n\n`
+  message += `My name is ${buyerName}, and I'm absolutely in love with your piece *"${product.value.name}"* on Alfietz! 😍\n\n`
   message += `I'd like to place an order with these details:\n`
-  message += `🔹 Product: ${product.value.name}\n`
-  message += `🔹 Price: ${product.value.price}\n`
-  message += `🔹 Size: ${selectedSize.value}\n`
-  message += `🔹 Color: ${variant.name}\n`
+  message += `🔹 *Product:* ${product.value.name}\n`
+  message += `🔹 *Price:* ${product.value.price}\n`
+  message += `🔹 *Size:* ${selectedSize.value}\n`
+  message += `🔹 *Color:* ${variant.name}\n`
 
   if (specialInstructions.value.trim()) {
-    message += `\n📝 Special Requirements: ${specialInstructions.value.trim()}\n`
+    message += `\n📝 *Special Requirements:* ${specialInstructions.value.trim()}\n`
   }
   
   if (withOffer && offerAmount.value) {
-    message += `\n💰 My Offer: TSh ${offerAmount.value}\n`
+    message += `\n💰 *My Offer:* TSh ${offerAmount.value}\n`
     message += `Would you be open to this offer? I'd love to make this heritage piece mine!\n`
   } else {
     message += `\nCould you please let me know how we can proceed with the payment and delivery? 🚚\n`

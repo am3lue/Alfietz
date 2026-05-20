@@ -1,6 +1,6 @@
 <!-------- (TailorDetails.vue) ./src/components/shop/TailorDetails.vue ------------>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import SectionHeader from '../layout/SectionHeader.vue'
 import { db } from '../../db/client'
 
@@ -20,16 +20,93 @@ const emit = defineEmits(['go-back', 'go-reviews', 'go-feedback', 'go-details'])
 const hasConnected = ref(false)
 const products = ref([])
 const reviews = ref([])
+const activeFilter = ref('all') // 'all', 'process', 'fabrics'
+const tailorStats = ref({
+  likes: 0,
+  clients: 0
+})
+const sellerData = ref({ ...props.seller })
+
+const filteredProducts = computed(() => {
+  if (activeFilter.value === 'process') {
+    return products.value.filter(p => 
+      p.name.toLowerCase().includes('process') || 
+      p.description.toLowerCase().includes('process') ||
+      p.categoryName === 'Process'
+    )
+  }
+  if (activeFilter.value === 'fabrics') {
+    return products.value.filter(p => 
+      p.name.toLowerCase().includes('fabric') || 
+      p.description.toLowerCase().includes('fabric') ||
+      p.categoryName === 'Fabrics'
+    )
+  }
+  return products.value
+})
+
+const highlights = computed(() => {
+  const processItem = products.value.find(p => 
+    p.name.toLowerCase().includes('process') || p.description.toLowerCase().includes('process')
+  )
+  const fabricItem = products.value.find(p => 
+    p.name.toLowerCase().includes('fabric') || p.description.toLowerCase().includes('fabric')
+  )
+  
+  return {
+    process: processItem ? processItem.image : null,
+    fabrics: fabricItem ? fabricItem.image : null
+  }
+})
 
 onMounted(async () => {
-  // Fetch actual products for this tailor
+  const tailorId = props.seller.owner_id || props.seller.id
   try {
+    // 0. Re-fetch seller info to ensure we have latest (whatsapp, gives, etc)
+    const sellerRes = await db.execute({
+      sql: "SELECT * FROM users WHERE id = ?",
+      args: [tailorId]
+    })
+    if (sellerRes.rows.length > 0) {
+      const s = sellerRes.rows[0]
+      sellerData.value = {
+        ...sellerData.value,
+        name: `${s.first_name} ${s.last_name}`,
+        username: s.username,
+        avatar: s.avatar,
+        bio: s.gives,
+        whatsapp: s.whatsapp
+      }
+    }
+
+    // 1. Fetch actual products for this tailor
     const res = await db.execute({
-      sql: "SELECT * FROM products WHERE owner_id = ? ORDER BY id DESC",
-      args: [props.seller.owner_id || props.seller.id]
+      sql: `
+        SELECT p.*, c.name as categoryName 
+        FROM products p 
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE p.owner_id = ? 
+        ORDER BY p.id DESC
+      `,
+      args: [tailorId]
     })
     products.value = res.rows
     
+    // 2. Fetch Real Stats (Likes & Clients)
+    const statsRes = await db.execute({
+      sql: `
+        SELECT 
+          (SELECT SUM(likes_count) FROM products WHERE owner_id = ?) as total_likes,
+          (SELECT COUNT(*) FROM orders WHERE tailor_id = ?) as total_clients
+      `,
+      args: [tailorId, tailorId]
+    })
+    if (statsRes.rows.length > 0) {
+      tailorStats.value.likes = statsRes.rows[0].total_likes || 0
+      tailorStats.value.clients = statsRes.rows[0].total_clients || 0
+    }
+
+    // 3. Fetch Reviews
     const revRes = await db.execute({
       sql: `
         SELECT r.*, u.username as author_name, u.avatar as author_avatar 
@@ -38,37 +115,42 @@ onMounted(async () => {
         WHERE r.product_id IN (SELECT id FROM products WHERE owner_id = ?)
         LIMIT 3
       `,
-      args: [props.seller.owner_id || props.seller.id]
+      args: [tailorId]
     })
     reviews.value = revRes.rows
   } catch (e) {
-    console.error("Error fetching tailor products:", e)
+    console.error("Error fetching tailor details:", e)
   }
 })
 
 const connectToWhatsApp = () => {
-  let phoneNumber = props.seller.whatsapp || "255700000000";
+  let phoneNumber = sellerData.value.whatsapp || "255700000000";
   let normalized = phoneNumber.startsWith('0') ? '255' + phoneNumber.slice(1) : phoneNumber.replace('+', '')
   
   const buyerName = props.userData.firstName || props.userData.username
-  const tailorName = props.seller.name || props.seller.username
+  const tailorName = sellerData.value.name || sellerData.value.username
 
-  const message = `Hello ${tailorName}! ✂️\n\nMy name is ${buyerName}, and I've been admiring your incredible work on Alfietz! 🌟\n\nI'm very interested in commissioning a custom piece from you and would love to discuss how we can bring a new heritage vision to life. 🧵✨\n\nLooking forward to hearing from you!\n\nBest regards,\n${buyerName} ✍️`;
+  const message = `Habari ${tailorName}! ✂️\n\nMy name is ${buyerName}, and I've been admiring your incredible work on Alfietz! 🌟\n\nI'm very interested in commissioning a custom piece from you and would love to discuss how we can bring a new heritage vision to life. 🧵✨\n\nLooking forward to hearing from you!\n\nBest regards,\n${buyerName} ✍️`;
   
   const url = `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank');
   hasConnected.value = true
 }
+
+const makeCall = () => {
+  let phoneNumber = sellerData.value.whatsapp || "255700000000";
+  window.open(`tel:${phoneNumber}`, '_self');
+}
 </script>
 
 <template>
-  <div v-if="seller" class="tailor-page pattern-heritage animate-fade">
+  <div v-if="sellerData" class="tailor-page pattern-heritage animate-fade">
     
     <div class="top-nav-glass">
       <button class="back-btn" @click="$emit('go-back')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
       </button>
-      <span class="header-username">{{ seller.name || seller.username }}</span>
+      <span class="header-username">{{ sellerData.name || sellerData.username }}</span>
       <button class="icon-btn-round">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
       </button>
@@ -77,58 +159,68 @@ const connectToWhatsApp = () => {
     <!-- IG Hero Section -->
     <header class="ig-hero">
       <div class="hero-main">
-        <div class="avatar-ring" :class="{ 'verified': seller.isVerified }">
-          <img :src="seller.avatar" :alt="seller.name" class="profile-img" />
-          <div v-if="seller.isVerified" class="verify-badge-small">
+        <div class="avatar-ring" :class="{ 'verified': sellerData.isVerified }">
+          <img :src="sellerData.avatar" :alt="sellerData.name" class="profile-img" />
+          <div v-if="sellerData.isVerified" class="verify-badge-small">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>
           </div>
         </div>
         
         <div class="hero-stats">
-          <div class="stat-box">
+          <div class="stat-box clickable" @click="activeFilter = 'all'">
             <span class="stat-num">{{ products.length }}</span>
             <span class="stat-label">Posts</span>
           </div>
           <div class="stat-box">
-            <span class="stat-num">{{ seller.likesCount || 0 }}</span>
+            <span class="stat-num">{{ tailorStats.likes }}</span>
             <span class="stat-label">Likes</span>
           </div>
           <div class="stat-box">
-            <span class="stat-num">{{ seller.clientsCount || 0 }}</span>
+            <span class="stat-num">{{ tailorStats.clients }}</span>
             <span class="stat-label">Clients</span>
           </div>
         </div>
       </div>
 
       <div class="hero-bio">
-        <h1 class="bio-name">{{ seller.name }}</h1>
+        <h1 class="bio-name">{{ sellerData.name }}</h1>
         <span class="bio-tag">Digital Tailor • Heritage Artisan</span>
-        <p class="bio-text">{{ seller.bio || 'Preserving African heritage through every stitch and pattern. Custom commissions available.' }}</p>
+        <p class="bio-text">{{ sellerData.bio || 'Preserving African heritage through every stitch and pattern. Custom commissions available.' }}</p>
         <div class="bio-links">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          <a href="#" class="bio-link">heritage-craft.art/{{ seller.username }}</a>
+          <div class="bio-link-item" @click="connectToWhatsApp">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-13.4 8.38 8.38 0 0 1 3.8.9L21 3z"/></svg>
+            <span>WhatsApp</span>
+          </div>
+          <div class="bio-link-item" @click="makeCall">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.79 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <span>Call</span>
+          </div>
         </div>
       </div>
 
       <div class="hero-actions">
-        <button class="action-btn-primary" @click="connectToWhatsApp">
-          {{ hasConnected ? 'Message Sent' : 'Message' }}
-        </button>
         <button class="action-btn-secondary">Share</button>
-        <button class="action-btn-secondary" @click="$emit('go-reviews')">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+        <button class="action-btn-secondary flex-center gap-4" @click="$emit('go-reviews')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Reviews
         </button>
       </div>
     </header>
 
     <!-- Highlights Bar -->
     <div class="highlights-container">
-      <div class="highlight-item">
-        <div class="highlight-circle">✂️</div>
+      <div class="highlight-item" @click="activeFilter = 'process'">
+        <div class="highlight-circle" :class="{ 'active': activeFilter === 'process' }">
+          <img v-if="highlights.process" :src="highlights.process" class="highlight-img" />
+          <span v-else>✂️</span>
+        </div>
         <span>Process</span>
       </div>
-      <div class="highlight-item">
-        <div class="highlight-circle">🧵</div>
+      <div class="highlight-item" @click="activeFilter = 'fabrics'">
+        <div class="highlight-circle" :class="{ 'active': activeFilter === 'fabrics' }">
+          <img v-if="highlights.fabrics" :src="highlights.fabrics" class="highlight-img" />
+          <span v-else>🧵</span>
+        </div>
         <span>Fabrics</span>
       </div>
       <div class="highlight-item" @click="$emit('go-reviews')">
@@ -164,18 +256,18 @@ const connectToWhatsApp = () => {
     </section>
 
     <!-- Tabbed Grid View -->
-    <div class="grid-nav">
-      <div class="grid-tab active">
+    <div class="grid-nav" id="products-grid">
+      <div class="grid-tab" :class="{ active: activeFilter === 'all' }" @click="activeFilter = 'all'">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       </div>
-      <div class="grid-tab">
+      <div class="grid-tab" :class="{ active: activeFilter !== 'all' }">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       </div>
     </div>
 
-    <div class="ig-grid">
+    <div v-if="filteredProducts.length > 0" class="ig-grid">
       <div 
-        v-for="product in products" 
+        v-for="product in filteredProducts" 
         :key="product.id" 
         class="grid-post tap-active"
         @click="$emit('go-details', product)"
@@ -184,11 +276,50 @@ const connectToWhatsApp = () => {
         <div v-if="product.status === 'Out of Stock'" class="oos-dot"></div>
       </div>
     </div>
+    <div v-else class="empty-grid-cta">
+      <p v-if="activeFilter === 'all'">No posts yet from this artisan.</p>
+      <p v-else>No {{ activeFilter }} posts found.</p>
+      <button v-if="activeFilter !== 'all'" class="view-all-link" @click="activeFilter = 'all'">View all posts</button>
+    </div>
 
   </div>
 </template>
 
 <style scoped>
+.stat-box.clickable {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.stat-box.clickable:hover {
+  opacity: 0.7;
+}
+
+.highlight-circle.active {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.highlight-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.empty-grid-cta {
+  padding: 60px 20px;
+  text-align: center;
+  background: var(--wood-walnut);
+  border-top: 1px solid var(--glass-border);
+}
+
+.empty-grid-cta p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
 .tailor-page {
   background-color: var(--wood-deep);
   min-height: 100vh;
@@ -309,16 +440,31 @@ const connectToWhatsApp = () => {
 .bio-links {
   display: flex;
   align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.bio-link-item {
+  display: flex;
+  align-items: center;
   gap: 6px;
   color: #3897f0;
   font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.bio-link-item:hover {
+  text-decoration: underline;
 }
 
 .hero-actions {
   display: flex;
   gap: 8px;
 }
+
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.gap-4 { gap: 4px; }
 
 .action-btn-primary {
   flex: 1;
