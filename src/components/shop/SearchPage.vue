@@ -1,6 +1,6 @@
 <!-------- (SearchPage.vue) ./src/components/SearchPage.vue ------------>
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { CATEGORY_EXAMPLES_SIMPLE as categoryExamples } from '../../constants'
 
 const props = defineProps({
@@ -26,11 +26,6 @@ const searchQuery = ref('')
 const isFocused = ref(false)
 const isSearching = ref(false)
 const emit = defineEmits(['go-back', 'search', 'select-category', 'go-tailor', 'go-product'])
-
-const highlights = computed(() => {
-...
-  }
-})
 
 const recommendedKeywords = computed(() => {
   if (!searchQuery.value.trim()) return ['Kente', 'Wedding', 'Ankara', 'Suits', 'Silk']
