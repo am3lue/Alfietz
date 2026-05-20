@@ -25,7 +25,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['go-back', 'go-reviews', 'go-feedback', 'toggle-favorite', 'delete', 'go-edit'])
+const emit = defineEmits(['go-back', 'go-reviews', 'go-feedback', 'toggle-favorite', 'delete', 'go-edit', 'order', 'negotiate'])
 
 const route = useRoute()
 
@@ -318,6 +318,29 @@ const connectToWhatsApp = (withOffer = false) => {
   }
 
   message += `\nBest regards,\n${buyerName} ✍️`
+
+  // Save to database
+  if (withOffer) {
+    emit('negotiate', {
+      itemName: product.value.name,
+      tailorId: product.value.owner_id,
+      offer: `TSh ${offerAmount.value.toLocaleString()}`,
+      size: selectedSize.value,
+      color: variant.name,
+      notes: specialInstructions.value.trim(),
+      image: variant.image || product.value.image
+    });
+  } else {
+    emit('order', {
+      itemName: product.value.name,
+      tailorId: product.value.owner_id,
+      price: product.value.price,
+      size: selectedSize.value,
+      color: variant.name,
+      notes: specialInstructions.value.trim(),
+      image: variant.image || product.value.image
+    });
+  }
 
   const url = `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`
   window.open(url, '_blank')

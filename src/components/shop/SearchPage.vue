@@ -1,10 +1,14 @@
 <!-------- (SearchPage.vue) ./src/components/SearchPage.vue ------------>
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { CATEGORY_EXAMPLES_SIMPLE as categoryExamples } from '../../constants'
 
 const props = defineProps({
   categories: {
+    type: Array,
+    default: () => []
+  },
+  searchHistory: {
     type: Array,
     default: () => []
   },
@@ -15,84 +19,103 @@ const props = defineProps({
 })
 
 const searchQuery = ref('')
+const isFocused = ref(false)
 const emit = defineEmits(['go-back', 'search', 'select-category'])
 
-const handleSearch = () => {
-  if (searchQuery.value.trim()) {
-    emit('search', searchQuery.value)
+const handleSearch = (query) => {
+  const q = query || searchQuery.value
+  if (q.trim()) {
+    emit('search', q)
   }
 }
 
 // Live search as user types
-import { watch } from 'vue'
 let searchTimeout = null
 watch(searchQuery, (newVal) => {
   if (searchTimeout) clearTimeout(searchTimeout)
+  if (!newVal.trim()) return
+  
   searchTimeout = setTimeout(() => {
-    if (newVal.trim()) {
-      emit('search', newVal)
-    }
-  }, 500) // 500ms debounce
+    emit('search', newVal)
+  }, 600) 
 })
 </script>
 
 <template>
-  <div class="search-page">
-    <!-- Header with Back Button -->
-    <div class="header-row">
+  <div class="search-page pattern-heritage animate-fade">
+    <!-- Header -->
+    <div class="search-header-glass">
       <button class="back-btn" @click="$emit('go-back')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
       </button>
-      <h1 class="title">{{ t('search') }}</h1>
-    </div>
-
-    <!-- Search Input Area -->
-    <div class="search-controls">
-      <div class="search-bar">
-        <span class="search-icon" @click="handleSearch">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        </span>
+      <div class="search-input-box" :class="{ 'focused': isFocused }">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <input 
           type="text" 
           v-model="searchQuery" 
-          :placeholder="t('search') + '...'" 
+          :placeholder="t('search') + ' heritage...'" 
           class="search-input" 
-          @keyup.enter="handleSearch"
+          @focus="isFocused = true"
+          @blur="setTimeout(() => isFocused = false, 200)"
+          @keyup.enter="handleSearch()"
         />
-      </div>
-    </div>
-
-    <!-- Browse Categories -->
-    <div class="browse-section">
-      <h3 class="section-title">{{ t('categories') }}</h3>
-      <div class="category-chips">
-        <button 
-          v-for="cat in categories" 
-          :key="cat.id" 
-          class="cat-chip"
-          @click="$emit('select-category', cat.name)"
-        >
-          <span class="chip-name">{{ cat.name }}</span>
-          <span class="chip-example" v-if="categoryExamples[cat.name]">
-            {{ categoryExamples[cat.name] }}
-          </span>
+        <button v-if="searchQuery" class="clear-btn" @click="searchQuery = ''">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
     </div>
 
-    <!-- Empty State Content (only if no query) -->
-    <div v-if="!searchQuery" class="empty-state-wrapper">
-      <div class="icon-circle">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"/>
-          <path d="m21 21-4.3-4.3"/>
-        </svg>
+    <div class="search-content">
+      <!-- Recent Searches -->
+      <section v-if="searchHistory.length > 0 && !searchQuery" class="search-section animate-slide-up">
+        <div class="section-top">
+          <h3 class="section-title">Recent Searches</h3>
+          <button class="text-link">Clear</button>
+        </div>
+        <div class="history-list">
+          <div 
+            v-for="item in searchHistory" 
+            :key="item" 
+            class="history-item tap-active"
+            @click="handleSearch(item)"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>{{ item }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Popular Categories -->
+      <section class="search-section animate-slide-up" :style="{ animationDelay: '0.1s' }">
+        <h3 class="section-title">Explore Categories</h3>
+        <div class="category-grid">
+          <button 
+            v-for="cat in categories" 
+            :key="cat.id" 
+            class="cat-card tap-active"
+            @click="$emit('select-category', cat.name)"
+          >
+            <div class="cat-content">
+              <span class="cat-name">{{ cat.name }}</span>
+              <span class="cat-tag" v-if="categoryExamples[cat.name]">
+                {{ categoryExamples[cat.name] }}
+              </span>
+            </div>
+            <div class="cat-arrow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Search Inspiration -->
+      <div v-if="!searchQuery" class="search-inspiration animate-fade">
+        <div class="inspire-card">
+          <div class="inspire-icon">✨</div>
+          <h4>Find your unique fit</h4>
+          <p>Search for "Kente", "Custom Suits", or "Wedding Wear" to discover artisanal pieces.</p>
+        </div>
       </div>
-      <h2 class="empty-title">{{ t('welcome') }} {{ t('search') }}</h2>
-      <p class="empty-subtitle">
-        Find the perfect African craftsmanship by<br>
-        searching for trends or master tailors.
-      </p>
     </div>
   </div>
 </template>
@@ -101,55 +124,42 @@ watch(searchQuery, (newVal) => {
 .search-page {
   background-color: var(--wood-deep);
   min-height: 100vh;
-  padding: 24px 20px;
-  display: flex;
-  flex-direction: column;
 }
 
-.header-row {
+.search-header-glass {
+  position: sticky;
+  top: 0;
+  padding: 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(15px);
+  z-index: 100;
   display: flex;
+  gap: 12px;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
+  border-bottom: 1px solid var(--glass-border);
 }
 
-.back-btn {
-  background: var(--wood-polished);
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--text-primary);
-}
-
-.title {
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-/* Search Controls */
-.search-controls {
-  margin-bottom: 24px;
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  background-color: var(--wood-walnut);
+.search-input-box {
+  flex: 1;
+  background: var(--wood-walnut);
+  border: 1px solid var(--glass-border);
+  height: 44px;
   border-radius: 12px;
-  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 10px;
+  transition: all 0.3s ease;
+}
+
+.search-input-box.focused {
+  border-color: var(--accent-amber);
+  background: var(--wood-polished);
+  box-shadow: 0 0 15px var(--accent-glow);
 }
 
 .search-icon {
-  margin-right: 12px;
-  display: flex;
-  cursor: pointer;
+  color: var(--text-muted);
 }
 
 .search-input {
@@ -157,113 +167,129 @@ watch(searchQuery, (newVal) => {
   border: none;
   outline: none;
   width: 100%;
-  font-size: 15px;
   color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 500;
 }
 
-/* Browse Section */
-.browse-section {
+.clear-btn {
+  color: var(--text-muted);
+}
+
+.search-content {
+  padding: 24px 16px;
+}
+
+.search-section {
   margin-bottom: 32px;
+}
+
+.section-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
 .section-title {
   font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 16px;
+  font-weight: 800;
   color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.category-chips {
+.text-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-amber);
+}
+
+.history-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--wood-walnut);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 
-.cat-chip {
-  background: var(--wood-deep);
-  border: 1px solid var(--wood-walnut);
-  padding: 10px 16px;
-  border-radius: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  transition: all 0.2s;
-  cursor: pointer;
-}
-
-.cat-chip:hover {
+.cat-card {
   background: var(--wood-walnut);
-}
-
-.chip-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.chip-example {
-  font-size: 10px;
-  color: var(--text-amber);
-  font-style: italic;
-}
-
-/* Empty State */
-.empty-state-wrapper {
-  flex: 1;
+  border: 1px solid var(--glass-border);
+  padding: 16px;
+  border-radius: 12px;
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  margin-top: -40px;
+  text-align: left;
 }
 
-.icon-circle {
-  width: 80px;
-  height: 80px;
-  background-color: var(--text-amber);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 24px;
-}
-
-.empty-title {
-  font-size: 18px;
+.cat-name {
+  display: block;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 12px 0;
 }
 
-.empty-subtitle {
+.cat-tag {
+  font-size: 11px;
+  color: var(--accent-amber);
+  font-weight: 600;
+}
+
+.cat-arrow {
+  color: var(--text-muted);
+}
+
+.search-inspiration {
+  margin-top: 40px;
+}
+
+.inspire-card {
+  background: linear-gradient(135deg, var(--wood-walnut) 0%, var(--wood-deep) 100%);
+  border: 1px solid var(--glass-border);
+  padding: 30px 20px;
+  border-radius: 20px;
+  text-align: center;
+}
+
+.inspire-icon {
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+.inspire-card h4 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.inspire-card p {
   font-size: 13px;
   color: var(--text-muted);
-  line-height: 1.5;
-  margin: 0;
+  line-height: 1.6;
 }
 
 .back-btn {
   background-color: var(--wood-walnut) !important;
   border: 1px solid var(--glass-border) !important;
   color: var(--text-primary) !important;
-  transition: all 0.2s ease !important;
-}
-
-.back-btn:hover {
-  background-color: var(--wood-polished) !important;
-  border-color: var(--accent-amber) !important;
-}
-
-.back-btn {
-  background-color: var(--wood-walnut) !important;
-  border: 1px solid var(--glass-border) !important;
-  color: var(--text-primary) !important;
-  transition: all 0.2s ease !important;
-}
-
-.back-btn:hover {
-  background-color: var(--wood-polished) !important;
-  border-color: var(--accent-amber) !important;
 }
 </style>
