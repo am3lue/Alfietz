@@ -70,10 +70,11 @@ const sendMessage = async () => {
   newMessage.value = ''
   
   try {
-    await db.execute({
-      sql: "INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)",
-      args: [props.userData.id, otherUserId, content]
-    })
+    await db.runAction('send_message', { 
+      senderId: props.userData.id, 
+      receiverId: otherUserId, 
+      content 
+    });
     
     // Add to local list for immediate feedback
     messages.value.push({
@@ -93,10 +94,10 @@ const sendMessage = async () => {
 
 const markAsRead = async () => {
   try {
-    await db.execute({
-      sql: "UPDATE messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ?",
-      args: [otherUserId, props.userData.id]
-    })
+    await db.runAction('mark_messages_read', { 
+      senderId: otherUserId, 
+      receiverId: props.userData.id 
+    });
   } catch (e) {
     console.error("Error marking as read:", e)
   }

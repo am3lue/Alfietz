@@ -7,6 +7,10 @@ const props = defineProps({
     type: String,
     default: 'home'
   },
+  isGuest: {
+    type: Boolean,
+    default: true
+  },
   t: {
     type: Function,
     required: true
@@ -15,21 +19,9 @@ const props = defineProps({
 
 const emit = defineEmits(['navigate'])
 
-const STORAGE_KEY_PREFIX = 'alfie_app_'
-const isGuest = computed(() => {
-  const storedUser = localStorage.getItem(STORAGE_KEY_PREFIX + 'user_data')
-  if (!storedUser) return true
-  try {
-    const user = JSON.parse(storedUser)
-    return user.id === 'guest'
-  } catch (e) {
-    return true
-  }
-})
-
 const navItems = computed(() => {
   const items = ['home', 'favorites']
-  if (!isGuest.value) {
+  if (!props.isGuest) {
     items.push('chats', 'profile')
   }
   return items

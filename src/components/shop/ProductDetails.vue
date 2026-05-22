@@ -386,12 +386,61 @@ const shareProduct = async () => {
 </script>
 
 <template>
-  <div v-if="loading" class="loading-container">
-    <div class="spinner-outer">
-      <div class="spinner-inner"></div>
-      <Hexagon class="spinner-hex animate-spin-slow" />
+  <div v-if="loading" class="product-page skeleton-mode">
+    <!-- Floating Heritage Status -->
+    <div class="heritage-status-overlay">
+      <div class="status-badge">
+        <div class="status-icon-pulse">🧩</div>
+        <span class="status-text">Deciphering Heritage...</span>
+      </div>
     </div>
-    <p class="loading-text">Deciphering Heritage...</p>
+
+    <div class="layout-container">
+      <div class="content-section">
+        <div class="header-row">
+          <div class="skeleton-title-large"></div>
+          <div class="skeleton-pill"></div>
+        </div>
+        
+        <div class="skeleton-color-section">
+          <div class="skeleton-label-small"></div>
+          <div class="skeleton-swatches">
+            <div v-for="i in 4" :key="i" class="skeleton-swatch"></div>
+          </div>
+        </div>
+
+        <div class="skeleton-specs">
+          <div v-for="i in 2" :key="i" class="skeleton-spec-item">
+            <div class="skeleton-label-mini"></div>
+            <div class="skeleton-value"></div>
+          </div>
+        </div>
+
+        <div class="skeleton-selection">
+          <div class="skeleton-label-small"></div>
+          <div class="skeleton-sizes">
+            <div v-for="i in 6" :key="i" class="skeleton-size"></div>
+          </div>
+        </div>
+
+        <div class="skeleton-story">
+          <div class="skeleton-label-small"></div>
+          <div class="skeleton-text-block"></div>
+          <div class="skeleton-text-block short"></div>
+        </div>
+      </div>
+      
+      <div class="image-section skeleton-image-area">
+        <div class="skeleton-top-bar">
+          <div class="skeleton-back-btn"></div>
+          <div class="skeleton-actions">
+            <div class="skeleton-action-icon"></div>
+            <div class="skeleton-action-icon"></div>
+          </div>
+        </div>
+        <div class="skeleton-main-img"></div>
+      </div>
+    </div>
   </div>
   
   <div v-else-if="error" class="error-container">
@@ -439,6 +488,19 @@ const shareProduct = async () => {
         
         <div class="category-module">
           <span class="category-label">{{ product.categoryName }}</span>
+        </div>
+
+        <!-- Artisan Section -->
+        <div class="artisan-section-mini" @click="$emit('go-tailor', { id: product.owner_id, username: product.sellerName, first_name: product.sellerFirstName, avatar: product.avatar })">
+          <img :src="product.avatar" class="artisan-avatar-mini" />
+          <div class="artisan-info-mini">
+            <span class="artisan-label">Sold by</span>
+            <span class="artisan-name">{{ product.sellerFirstName || product.sellerName }}</span>
+          </div>
+          <button class="view-artisan-btn">
+            View Profile
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
         </div>
         
         <div class="specs-grid">
@@ -495,26 +557,41 @@ const shareProduct = async () => {
 
         <div class="reviews-section">
           <div class="section-header-row">
-            <h3 class="section-title">Heritage Reviews</h3>
+            <div class="section-title-group">
+              <h3 class="section-title">Heritage Reviews</h3>
+              <div v-if="reviews.length > 0" class="rating-badge-summary">
+                <span class="avg-val">{{ (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) }}</span>
+                <span class="star-mini">★</span>
+                <span class="count-val">({{ reviews.length }})</span>
+              </div>
+            </div>
             <button v-if="reviews.length > 0" class="view-all-link" @click="$emit('go-reviews')">
-              View all →
+              See all reviews →
             </button>
           </div>
-          <p v-if="!reviews.length" class="no-reviews">
-            No reviews yet. Be the first to share your heritage experience!
-          </p>
+          
+          <div v-if="!reviews.length" class="no-reviews-box">
+            <div class="empty-icon-mini">✨</div>
+            <p class="no-reviews-text">No reviews yet. Be the first to share your experience!</p>
+            <button class="write-first-btn" @click="$emit('go-write-review')">Write a Review</button>
+          </div>
+          
           <div v-else class="review-preview-list">
-            <div v-for="review in reviews.slice(0, 2)" :key="review.id" class="review-item">
+            <div v-for="review in reviews.slice(0, 3)" :key="review.id" class="review-item-modern">
               <div class="review-item-header">
-                <img :src="review.avatar" class="review-avatar" />
-                <div class="review-info">
-                  <span class="review-author">{{ review.author }}</span>
-                  <div class="star-rating mini">
+                <img :src="review.avatar || 'https://i.pravatar.cc/150?u=' + review.author" class="review-avatar-modern" />
+                <div class="review-info-modern">
+                  <div class="author-row-modern">
+                    <span class="review-author-modern">{{ review.author }}</span>
+                    <span class="verified-dot"></span>
+                  </div>
+                  <div class="star-rating mini-modern">
                     <span v-for="n in 5" :key="n" class="star" :class="n <= review.rating ? 'filled' : 'empty'">★</span>
                   </div>
                 </div>
+                <span class="review-date-modern">{{ review.time }}</span>
               </div>
-              <p class="review-item-text">{{ review.text }}</p>
+              <p class="review-text-modern">{{ review.text }}</p>
             </div>
           </div>
         </div>
@@ -654,6 +731,122 @@ const shareProduct = async () => {
 </template>
 
 <style scoped>
+/* Heritage Status Overlay */
+.heritage-status-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.status-badge {
+  background: rgba(13, 8, 5, 0.8);
+  backdrop-filter: blur(12px);
+  padding: 16px 24px;
+  border-radius: 100px;
+  border: 1px solid var(--accent-amber);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px var(--accent-glow);
+  animation: badgePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.status-icon-pulse {
+  font-size: 20px;
+  animation: iconPulse 1.5s ease-in-out infinite;
+}
+
+.status-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-amber);
+  letter-spacing: 1px;
+}
+
+@keyframes badgePop {
+  from { transform: scale(0.8) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes iconPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0px var(--accent-amber)); }
+  50% { transform: scale(1.2); filter: drop-shadow(0 0 10px var(--accent-amber)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0px var(--accent-amber)); }
+}
+
+/* Skeleton Loading Animation */
+.skeleton-mode {
+  pointer-events: none;
+  background: var(--wood-deep);
+}
+
+.skeleton-title-large { width: 60%; height: 32px; background: var(--wood-walnut); border-radius: 8px; }
+.skeleton-pill { width: 100px; height: 40px; background: var(--wood-walnut); border-radius: 20px; }
+
+.skeleton-color-section { margin-top: 32px; }
+.skeleton-label-small { width: 150px; height: 16px; background: var(--wood-walnut); border-radius: 4px; margin-bottom: 16px; }
+.skeleton-swatches { display: flex; gap: 12px; }
+.skeleton-swatch { width: 48px; height: 48px; border-radius: 12px; background: var(--wood-walnut); }
+
+.skeleton-specs { display: flex; gap: 40px; margin-top: 32px; }
+.skeleton-spec-item { flex: 1; }
+.skeleton-label-mini { width: 60px; height: 10px; background: var(--wood-walnut); border-radius: 2px; margin-bottom: 8px; }
+.skeleton-value { width: 100%; height: 16px; background: var(--wood-walnut); border-radius: 4px; }
+
+.skeleton-selection { margin-top: 32px; }
+.skeleton-sizes { display: flex; flex-wrap: wrap; gap: 8px; }
+.skeleton-size { width: 50px; height: 36px; border-radius: 10px; background: var(--wood-walnut); }
+
+.skeleton-story { margin-top: 32px; }
+.skeleton-text-block { width: 100%; height: 14px; background: var(--wood-walnut); border-radius: 4px; margin-bottom: 8px; }
+.skeleton-text-block.short { width: 70%; }
+
+.skeleton-image-area { background: var(--wood-deep) !important; display: flex; flex-direction: column; }
+.skeleton-top-bar { position: absolute; top: 24px; left: 24px; right: 24px; display: flex; justify-content: space-between; z-index: 10; }
+.skeleton-back-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--wood-walnut); }
+.skeleton-actions { display: flex; gap: 12px; }
+.skeleton-action-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--wood-walnut); }
+.skeleton-main-img { width: 70%; height: 60%; background: var(--wood-walnut); border-radius: 24px; margin: auto; }
+
+/* Shimmer Effect */
+.skeleton-mode [class*="skeleton-"] {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.skeleton-mode [class*="skeleton-"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.1) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .title-group { display: flex; flex-direction: column; gap: 8px; }
 .out-of-stock-tag { background: #EF4444; color: white; padding: 4px 12px; border-radius: 8px; font-size: 12px; font-weight: 800; width: fit-content; text-transform: uppercase; margin-bottom: 8px; }
 
@@ -982,6 +1175,73 @@ const shareProduct = async () => {
   letter-spacing: 1px;
 }
 
+.artisan-section-mini {
+  background: var(--wood-walnut);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.artisan-section-mini:hover {
+  border-color: var(--accent-amber);
+  background: var(--wood-polished);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+.artisan-avatar-mini {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1.5px solid var(--glass-border);
+}
+
+.artisan-info-mini {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.artisan-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.artisan-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.view-artisan-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(217, 164, 4, 0.1);
+  border: 1px solid rgba(217, 164, 4, 0.2);
+  color: var(--accent-amber);
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.view-artisan-btn:hover {
+  background: var(--accent-amber);
+  color: white;
+}
+
 .specs-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1037,79 +1297,173 @@ const shareProduct = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.section-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rating-badge-summary {
+  background: rgba(217, 164, 4, 0.1);
+  padding: 4px 10px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(217, 164, 4, 0.2);
+}
+
+.avg-val {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent-amber);
+}
+
+.star-mini {
+  color: var(--accent-amber);
+  font-size: 12px;
+}
+
+.count-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 .view-all-link {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--accent-amber);
   background: none;
   border: none;
   cursor: pointer;
 }
 
+.no-reviews-box {
+  background: var(--wood-walnut);
+  border: 1px dashed var(--glass-border);
+  border-radius: 24px;
+  padding: 40px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.empty-icon-mini {
+  font-size: 24px;
+  opacity: 0.8;
+}
+
+.no-reviews-text {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+.write-first-btn {
+  background: var(--wood-deep);
+  border: 1px solid var(--accent-amber);
+  color: var(--accent-amber);
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+}
+
+.write-first-btn:hover {
+  background: var(--accent-amber);
+  color: white;
+}
+
 .review-preview-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
-.review-item {
+.review-item-modern {
   background: var(--wood-walnut);
-  padding: 16px;
-  border-radius: 16px;
   border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 16px;
+  transition: transform 0.2s;
+}
+
+.review-item-modern:hover {
+  border-color: rgba(217, 164, 4, 0.2);
 }
 
 .review-item-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
-.review-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+.review-avatar-modern {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   object-fit: cover;
+  border: 1.5px solid var(--glass-border);
 }
 
-.review-info {
+.review-info-modern {
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.review-author {
+.author-row-modern {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.review-author-modern {
   font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
-.star-rating.mini .star {
+.verified-dot {
+  width: 6px;
+  height: 6px;
+  background: #10B981;
+  border-radius: 50%;
+}
+
+.star-rating.mini-modern .star {
   font-size: 12px;
 }
 
-.star.filled { color: #FFC107; }
-.star.empty { color: #E0E0E0; }
+.star.filled { color: var(--accent-amber); }
+.star.empty { color: rgba(255, 255, 255, 0.1); }
 
-.review-item-text {
-  font-size: 13px;
+.review-date-modern {
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-muted);
-  line-height: 1.5;
-  margin: 0;
 }
 
-.no-reviews {
-  text-align: center;
-  padding: 40px 20px;
+.review-text-modern {
+  font-size: 13px;
   color: var(--text-muted);
-  font-style: italic;
-  font-size: 14px;
-  background: var(--wood-walnut);
-  border: 1px dashed var(--glass-border);
-  border-radius: 20px;
+  line-height: 1.6;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .similar-products-section {

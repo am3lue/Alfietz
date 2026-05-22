@@ -8,7 +8,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['go-back', 'submit'])
+const emit = defineEmits(['go-back', 'submit-app-experience'])
 
 const reviewText = ref('')
 const rating = ref(5)
@@ -37,7 +37,7 @@ const removeImage = () => {
 
 const handleSubmit = () => {
   if (!reviewText.value.trim()) return
-  emit('submit', {
+  emit('submit-app-experience', {
     rating: rating.value,
     text: reviewText.value,
     image: imageBase64.value
@@ -48,60 +48,77 @@ const handleSubmit = () => {
 <template>
   <div class="app-review-page animate-fade">
     <div class="header-row">
-      <button class="back-btn" @click="$emit('go-back')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      <button class="back-btn tap-active" @click="$emit('go-back')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
       </button>
-      <h1 class="title">App Review</h1>
+      <h1 class="title">App Experience</h1>
     </div>
 
     <div class="form-container">
-      <div class="rating-section">
-        <p class="section-label">How is your experience with Alfie?</p>
-        <div class="stars">
+      <div class="rating-section-card">
+        <p class="section-label">How is your journey with Alfietz?</p>
+        <div class="stars-row">
           <button 
             v-for="star in 5" 
             :key="star" 
-            class="star-btn"
-            :class="{ active: star <= rating }"
+            class="star-btn-large"
+            :class="{ active: star <= rating, 'pulse': star === rating }"
             @click="rating = star"
           >
-            <svg width="36" height="36" viewBox="0 0 24 24" :fill="star <= rating ? 'var(--accent-amber)' : 'none'" stroke="var(--accent-amber)" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg width="44" height="44" viewBox="0 0 24 24" :fill="star <= rating ? 'var(--accent-amber)' : 'none'" :stroke="star <= rating ? 'var(--accent-amber)' : 'rgba(255,255,255,0.15)'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
           </button>
         </div>
+        <p class="rating-status-text">
+          {{ ['Room for improvement', 'Getting there', 'Good experience', 'Very satisfied', 'Absolutely love it!'][rating - 1] }}
+        </p>
       </div>
 
-      <div class="input-section">
-        <label class="section-label">Your Feedback</label>
-        <textarea 
-          v-model="reviewText" 
-          :maxlength="maxChars"
-          placeholder="What do you love? What can we improve?" 
-          class="review-textarea"
-        ></textarea>
-        <div class="char-count">{{ remainingChars }} characters remaining</div>
+      <div class="input-group-modern">
+        <label class="group-label">Your Feedback</label>
+        <div class="textarea-container">
+          <textarea 
+            v-model="reviewText" 
+            :maxlength="maxChars"
+            placeholder="Share your thoughts on how we can make Alfietz even better for the tribe..." 
+            class="review-textarea-modern"
+          ></textarea>
+          <div class="char-counter" :class="{ 'limit': remainingChars < 30 }">
+            {{ remainingChars }}
+          </div>
+        </div>
       </div>
 
-      <div class="image-upload-section">
-        <label class="section-label">Referencing Image (Optional)</label>
-        <div v-if="!imagePreview" class="upload-placeholder" @click="$refs.fileInput.click()">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span>Upload Image</span>
+      <div class="image-upload-modern">
+        <label class="group-label">Reference Image (Optional)</label>
+        <div v-if="!imagePreview" class="upload-zone" @click="$refs.fileInput.click()">
+          <div class="upload-icon-circle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div class="upload-text">
+            <span class="main-text">Click to upload image</span>
+            <span class="sub-text">PNG, JPG up to 5MB</span>
+          </div>
           <input type="file" ref="fileInput" hidden accept="image/*" @change="handleImageUpload" />
         </div>
-        <div v-else class="image-preview-container">
-          <img :src="imagePreview" class="preview-img" />
-          <button class="remove-img-btn" @click="removeImage">✕</button>
+        <div v-else class="preview-container-modern">
+          <img :src="imagePreview" class="preview-img-modern" />
+          <button class="remove-btn-overlay" @click="removeImage">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
       </div>
     </div>
 
-    <div class="bottom-action">
+    <div class="bottom-action-fixed">
       <button 
-        class="primary-btn" 
+        class="submit-btn-modern" 
         :disabled="!reviewText.trim()"
         @click="handleSubmit"
       >
-        Submit App Review
+        <span>Submit Experience</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
       </button>
     </div>
   </div>
@@ -111,7 +128,7 @@ const handleSubmit = () => {
 .app-review-page {
   background: var(--wood-deep);
   min-height: 100vh;
-  padding: 24px 20px 40px 20px;
+  padding: 24px 20px 140px;
   max-width: 800px;
   margin: 0 auto;
   display: flex;
@@ -122,13 +139,34 @@ const handleSubmit = () => {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 32px;
+  margin-bottom: 40px;
+}
+
+.back-btn {
+  background-color: var(--wood-walnut);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background-color: var(--wood-polished);
+  border-color: var(--accent-amber);
 }
 
 .title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-amber);
+  margin: 0;
+  letter-spacing: -0.5px;
 }
 
 .form-container {
@@ -138,107 +176,247 @@ const handleSubmit = () => {
   gap: 32px;
 }
 
-.section-label {
-  display: block;
-  font-size: 14px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-}
-
-.stars {
-  display: flex;
-  gap: 12px;
-}
-
-.star-btn {
-  transition: transform 0.2s;
-}
-
-.star-btn:hover {
-  transform: scale(1.1);
-}
-
-.review-textarea {
-  width: 100%;
-  min-height: 150px;
+.rating-section-card {
   background: var(--wood-walnut);
   border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  padding: 16px;
-  color: white;
-  font-size: 15px;
-  outline: none;
-  resize: none;
+  border-radius: 24px;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 
-.review-textarea:focus {
-  border-color: var(--accent-amber);
+.section-label {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 24px;
 }
 
-.char-count {
-  text-align: right;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 8px;
-}
-
-.upload-placeholder {
-  width: 100%;
-  height: 120px;
-  border: 2px dashed var(--glass-border);
-  border-radius: 16px;
+.stars-row {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
   gap: 12px;
+  margin-bottom: 16px;
+}
+
+.star-btn-large {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.star-btn-large:hover {
+  transform: scale(1.2);
+}
+
+.star-btn-large.active svg {
+  filter: drop-shadow(0 0 10px var(--accent-glow));
+}
+
+.star-btn-large.pulse {
+  animation: starPulse 0.5s ease;
+}
+
+@keyframes starPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.rating-status-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-amber);
+  margin: 0;
+  min-height: 20px;
+}
+
+.input-group-modern {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.group-label {
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding-left: 4px;
+}
+
+.textarea-container {
+  position: relative;
+}
+
+.review-textarea-modern {
+  width: 100%;
+  min-height: 180px;
+  background: var(--wood-walnut);
+  border: 2px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 20px;
+  color: white;
+  font-size: 16px;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  transition: all 0.3s;
+}
+
+.review-textarea-modern:focus {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 20px rgba(217, 164, 4, 0.1);
+}
+
+.char-counter {
+  position: absolute;
+  bottom: 16px;
+  right: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: rgba(0,0,0,0.3);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.char-counter.limit {
+  color: #EF4444;
+}
+
+.upload-zone {
+  width: 100%;
+  height: 140px;
+  background: var(--wood-walnut);
+  border: 2px dashed var(--glass-border);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 20px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
-.upload-placeholder:hover {
+.upload-zone:hover {
   border-color: var(--accent-amber);
-  color: var(--text-primary);
+  background: rgba(255,255,255,0.02);
 }
 
-.image-preview-container {
-  position: relative;
-  width: 100%;
-  height: 200px;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.preview-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.remove-img-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 32px;
-  height: 32px;
-  background: rgba(0,0,0,0.6);
-  color: white;
+.upload-icon-circle {
+  width: 52px;
+  height: 52px;
+  background: rgba(217, 164, 4, 0.1);
+  color: var(--accent-amber);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.bottom-action {
-  margin-top: 40px;
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.primary-btn:disabled {
+.main-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sub-text {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.preview-container-modern {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 2px solid var(--accent-amber);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.preview-img-modern {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-btn-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(10px);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.remove-btn-overlay:hover {
+  background: #EF4444;
+  border-color: #EF4444;
+}
+
+.bottom-action-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 24px 20px 40px;
+  background: linear-gradient(to top, var(--wood-deep) 80%, transparent);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+}
+
+.submit-btn-modern {
+  width: 100%;
+  max-width: 400px;
+  background: var(--accent-amber);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 18px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  box-shadow: 0 10px 25px var(--accent-glow);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.submit-btn-modern:hover:not(:disabled) {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 30px var(--accent-glow);
+}
+
+.submit-btn-modern:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.submit-btn-modern:active:not(:disabled) {
+  transform: scale(0.95);
 }
 </style>

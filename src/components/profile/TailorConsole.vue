@@ -201,10 +201,7 @@ const fetchData = async () => {
 const toggleStock = async (product) => {
   const newStatus = product.status === 'In Stock' ? 'Out of Stock' : 'In Stock'
   try {
-    await db.execute({
-      sql: `UPDATE products SET status = ? WHERE id = ?`,
-      args: [newStatus, product.id]
-    })
+    await db.runAction('toggle_stock', { productId: product.id, status: newStatus });
     product.status = newStatus
   } catch (e) {
     console.error("Error updating stock status:", e)
@@ -260,10 +257,7 @@ const openWhatsApp = (customerData, orderOrNeg, type = 'order') => {
 
 const handleAcceptNegotiation = async (neg) => {
   try {
-    await db.execute({
-      sql: `UPDATE negotiations SET status = 'Accepted' WHERE id = ?`,
-      args: [neg.id]
-    })
+    await db.runAction('update_negotiation_status', { negotiationId: neg.id, status: 'Accepted' });
     
     // Automatically create an order from this negotiation
     emit('order', {
@@ -294,10 +288,7 @@ const handleAcceptNegotiation = async (neg) => {
 
 const handleDeclineNegotiation = async (neg) => {
   try {
-    await db.execute({
-      sql: `UPDATE negotiations SET status = 'Declined' WHERE id = ?`,
-      args: [neg.id]
-    })
+    await db.runAction('update_negotiation_status', { negotiationId: neg.id, status: 'Declined' });
     neg.status = 'Declined'
     showDialog({
       title: 'Negotiation Declined',
@@ -353,7 +344,7 @@ const handleDeclineNegotiation = async (neg) => {
             <span class="reach-value">{{ stats.totalLikes }}</span>
             <span class="reach-label">Likes</span>
           </div>
-          <div class="reach-item">
+          <div class="reach-item clickable" @click="$emit('go-reviews', userData.id)">
             <span class="reach-value">{{ stats.totalReviews }}</span>
             <span class="reach-label">Reviews</span>
           </div>
