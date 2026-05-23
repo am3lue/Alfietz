@@ -101,7 +101,7 @@ watch(searchQuery, (newVal) => {
         <span class="read-link">Read Heritage Stories →</span>
       </div>
       <div class="banner-image">
-        <img src="https://images.unsplash.com/photo-1660695828374-4ff51ac9df5d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8a2VudGV8ZW58MHx8MHx8fDA%3D" alt="Kente Story" />
+        <img src="https://images.unsplash.com/photo-1660695828374-4ff51ac9df5d?w=800&auto=format&fit=crop" alt="Kente Story" />
       </div>
     </section>
 
@@ -544,13 +544,15 @@ watch(searchQuery, (newVal) => {
 }
 
 .collection-module.kente {
-  background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url("https://images.unsplash.com/photo-1660695828374-4ff51ac9df5d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8a2VudGV8ZW58MHx8MHx8fDA%3D");
+  background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url("https://images.unsplash.com/photo-1660695828374-4ff51ac9df5d?w=800&auto=format&fit=crop");
   background-size: cover;
   background-position: center;
 }
 
 .collection-module.ankara {
-  background: linear-gradient(135deg, var(--wood-polished) 0%, var(--wood-walnut) 100%);
+  background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url("https://i.ibb.co/FbR4NJjf/www-cewax.jpg");
+  background-size: cover;
+  background-position: center;
 }
 
 .module-tech-overlay {
