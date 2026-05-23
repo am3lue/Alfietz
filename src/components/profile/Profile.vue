@@ -68,7 +68,7 @@ const showLogoutDialog = ref(false)
           <div class="dashboard-actions">
             <button class="console-btn" @click="$emit('go-console')">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6" y2="6"/><line x1="6" y1="18" x2="6" y2="18"/></svg>
-              Tailor Console
+              {{ t('tailorConsole') }}
             </button>
             <button class="primary-btn upload-btn" @click="$emit('go-upload')">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -104,15 +104,15 @@ const showLogoutDialog = ref(false)
             <div class="menu-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </div>
-            <span class="menu-text">Tribe Experiences</span>
+            <span class="menu-text">{{ t('tribeExperiencesMenu') }}</span>
             <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           </div>
 
           <div class="menu-item" @click="$emit('go-app-review')">
             <div class="menu-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2-2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             </div>
-            <span class="menu-text">Share Your Journey</span>
+            <span class="menu-text">{{ t('shareJourneyMenu') }}</span>
             <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           </div>
 
@@ -134,7 +134,7 @@ const showLogoutDialog = ref(false)
 
         <!-- My Heritage Section (Suppliers Only) -->
         <div v-if="userData.userType === 'supplier' && myProducts.length > 0" class="my-heritage-section">
-          <h3 class="section-title-alt">My Heritage</h3>
+          <h3 class="section-title-alt">{{ t('myHeritageSection') }}</h3>
           <div class="products-grid">
             <ProductCard 
               v-for="product in myProducts" 

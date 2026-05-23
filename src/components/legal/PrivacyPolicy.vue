@@ -15,7 +15,7 @@ defineEmits(['go-back'])
       <p class="last-updated">Last Updated: May 2026</p>
 
       <h2>1. Introduction</h2>
-      <p>Welcome to the Alfietz App, operated by the <strong>REBi Group</strong>. We are committed to protecting the privacy and security of our users. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile and web applications.</p>
+      <p>Welcome to the Alfietz App, operated independently by the <strong>Alfietz Team</strong>. We are committed to protecting the privacy and security of our users. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile and web applications.</p>
 
       <h2>2. Information We Collect</h2>
       <p>We may collect the following types of information:</p>
@@ -39,7 +39,7 @@ defineEmits(['go-back'])
       <p>We do not sell your personal data to third parties. We may share your information only in the following circumstances:</p>
       <ul>
         <li><strong>With Suppliers:</strong> When a Buyer initiates an order, necessary contact and measurement data is shared with the specific Supplier.</li>
-        <li><strong>Legal Compliance:</strong> If required by law, subpoena, or to protect the rights, property, or safety of REBi Group, our users, or others.</li>
+        <li><strong>Legal Compliance:</strong> If required by law, subpoena, or to protect the rights, property, or safety of Alfietz, our users, or others.</li>
         <li><strong>Service Providers:</strong> With trusted third-party vendors who assist in operating our platform (e.g., Turso database hosting), under strict confidentiality agreements.</li>
       </ul>
 
@@ -53,7 +53,7 @@ defineEmits(['go-back'])
       <p>Depending on your jurisdiction, you may have the right to access, correct, update, or delete your personal data. You can manage your profile within the App or contact us to exercise these rights.</p>
 
       <h2>8. Contact Us</h2>
-      <p>For any questions regarding this Privacy Policy or your data, please contact the REBi Group legal team via our Help and Support channels.</p>
+      <p>For any questions regarding this Privacy Policy or your data, please contact the Alfietz legal team via our Help and Support channels.</p>
     </div>
   </div>
 </template>

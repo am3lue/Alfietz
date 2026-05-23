@@ -1,8 +1,7 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { db } from './db/client'
 import { useRouter, useRoute } from 'vue-router'
-import bcrypt from 'bcryptjs'
 
 // i18n
 import { translations } from './translations'
@@ -15,6 +14,7 @@ import WebHeader from './components/layout/WebHeader.vue'
 import LoadingSpinner from './components/layout/LoadingSpinner.vue'
 import Splash from './components/layout/Splash.vue'
 import { SpeedInsights } from "@vercel/speed-insights/vue"
+import { Analytics } from "@vercel/analytics/vue"
 
 // ==========================================
 // STATE MANAGEMENT
@@ -42,17 +42,17 @@ const userData = ref(getStored('user_data', {
   userType: 'buyer',
   needs: '',
   gives: '',
-  theme: 'light',
+  theme: 'dark',
   profileViews: 0
 }))
 
-const theme = ref(getStored('theme', 'light'))
 const currentLanguage = ref(getStored('language', 'en'))
 const isGlobalLoading = ref(false)
 const loadingMessage = ref('Summoning Heritage...')
 const toast = ref({ show: false, message: '', type: 'info' })
 const isDeepLoading = ref(false)
 const resetEmail = ref('')
+const resetVerificationCode = ref('')
 
 const selectedSeller = ref(getStored('selected_seller', null))
 const selectedCategory = ref(getStored('selected_category', 'Explore more'))
@@ -160,29 +160,58 @@ const handleResetPassword = async (newPassword) => {
   isGlobalLoading.value = true
   loadingMessage.value = 'Forging new password...'
   try {
-    await db.runAction('reset_password', { password: newPassword, email: resetEmail.value })
+    await db.runAction('reset_password', { 
+      password: newPassword, 
+      email: resetEmail.value,
+      code: resetVerificationCode.value // We need to store this
+    })
     showToast('Password reset successfully!', 'success')
     navigateTo('login')
   } catch (e) {
     console.error('Reset password error:', e)
-    showToast('Failed to reset password.', 'error')
+    showToast(e.message || 'Failed to reset password.', 'error')
   } finally {
     isGlobalLoading.value = false
   }
 }
 
-const handlePasswordReset = (email) => {
-  resetEmail.value = email
-  showToast('Verification code sent to ' + email, 'success')
-  navigateTo('verify-code')
+const handlePasswordReset = async (email) => {
+  isGlobalLoading.value = true
+  loadingMessage.value = 'Sending heritage code...'
+  try {
+    const res = await db.runAction('request_password_reset', { email })
+    resetEmail.value = email
+    
+    // In our prototype, we show the code in the toast for easy testing
+    // In production, this would only be sent via email
+    const msg = `Verification code sent to ${email}.`
+    showToast(msg, 'success')
+    
+    // For prototype convenience, if the API returned the code, let's log it
+    if (res.code) console.log(`[PROTOTYPE] Verification code is: ${res.code}`)
+    
+    navigateTo('verify-code')
+  } catch (e) {
+    console.error('Password reset request error:', e)
+    showToast(e.message || 'Failed to request reset.', 'error')
+  } finally {
+    isGlobalLoading.value = false
+  }
 }
 
-const handleVerifyCode = (code) => {
-  if (code === '1234') { // Mock verification
+const handleVerifyCode = async (code) => {
+  isGlobalLoading.value = true
+  loadingMessage.value = 'Verifying with ancestors...'
+  try {
+    await db.runAction('verify_reset_code', { email: resetEmail.value, code })
+    resetVerificationCode.value = code
     showToast('Code verified!', 'success')
     navigateTo('reset-password')
-  } else {
-    showToast('Invalid verification code.', 'error')
+  } catch (e) {
+    console.error('Verification error:', e)
+    showToast(e.message || 'Invalid verification code.', 'error')
+  } finally {
+    isGlobalLoading.value = false
   }
 }
 
@@ -202,6 +231,12 @@ const handleLogin = async (data) => {
 
     if (res.user) {
       console.log('[Auth] Login successful! Setting user data.');
+      
+      // Store token securely
+      if (res.token) {
+        db.setToken(res.token);
+      }
+      
       const u = res.user;
       const loggedUser = {
         id: u.id,
@@ -241,7 +276,12 @@ const handleSignUp = async (data) => {
     const newId = 'u' + Date.now();
     const signupData = { ...data, id: newId };
     
-    await db.runAction('signup', signupData);
+    const res = await db.runAction('signup', signupData);
+    
+    // Store token
+    if (res.token) {
+      db.setToken(res.token);
+    }
     
     // Update state (server returns nothing or success, we use local data)
     userData.value = signupData;
@@ -259,6 +299,7 @@ const handleSignUp = async (data) => {
 }
 
 const handleLogout = () => {
+  db.clearToken()
   userData.value = { id: 'guest', username: 'guest' }
   setStored('user_data', { id: 'guest', username: 'guest' })
   setStored('favorites', []);
@@ -441,29 +482,44 @@ const handleUploadWork = async (data) => {
 
 const handleNewOrder = async (data) => {
   console.log('[Data] Saving new order:', data);
+  const customerId = userData.value.id;
+  const tailorId = data.tailorId;
+
   try {
     const orderId = 'ORD-' + Math.floor(1000 + Math.random() * 9000);
     await db.runAction('create_order', {
       ...data,
       id: orderId,
-      customerId: userData.value.id
+      customerId: customerId
     });
     console.log('[Data] Order saved successfully');
     
-    // Notify the user
-    await createNotification(userData.value.id === data.tailorId ? data.customerId : data.tailorId, 
-      `New order created for "${data.itemName}"! 📦✨`);
+    // Notify the tailor
+    if (tailorId && tailorId !== 'guest') {
+      await createNotification(tailorId, `New order created for "${data.itemName}"! 📦✨`);
+    }
+    
+    // Also notify the customer if they aren't the same person
+    if (customerId !== tailorId && customerId !== 'guest') {
+      await createNotification(customerId, `Your order for "${data.itemName}" has been placed! 🧵`);
+    }
+      
+    showToast('Order placed successfully! Connecting to WhatsApp...', 'success');
   } catch (e) {
     console.error('[Data] Failed to save order:', e);
+    showToast('Failed to place order. Connection error.', 'error');
   }
 }
 
 const handleNewNegotiation = async (data) => {
+  const customerId = userData.value.id;
+  const tailorId = data.tailorId;
+
   try {
     await db.runAction('create_negotiation', {
       itemName: data.itemName || 'Unknown Item',
-      customerId: userData.value.id,
-      tailorId: data.tailorId,
+      customerId: customerId,
+      tailorId: tailorId,
       price: data.offer || data.price || '0',
       size: data.size || 'N/A',
       color: data.color || 'N/A',
@@ -471,9 +527,13 @@ const handleNewNegotiation = async (data) => {
       image: data.image || ''
     })
     showToast('Negotiation initiated successfully!', 'success')
-    await createNotification(data.tailorId, `New negotiation offer for "${data.itemName}"! 💰`)
+    
+    if (tailorId && tailorId !== 'guest') {
+      await createNotification(tailorId, `New negotiation offer for "${data.itemName}"! 💰`)
+    }
   } catch (e) {
     console.error('Negotiation error:', e)
+    showToast('Failed to start negotiation. Connection error.', 'error');
   }
 }
 
@@ -481,6 +541,10 @@ const createNotification = async (userId, message) => {
   try {
     await db.runAction('create_notification', { userId, message });
     console.log(`[Notification] Created for ${userId}: ${message}`)
+    // Refresh local notifications if it's for the current user
+    if (userId === userData.value.id) {
+      await fetchInitialData(true);
+    }
   } catch (e) {
     console.error('[Notification] Failed to create:', e)
   }
@@ -499,6 +563,7 @@ const handleUpdateOrderStatus = async (data) => {
     await fetchInitialData()
   } catch (e) {
     console.error('[Data] Failed to update status:', e);
+    showToast('Failed to update status. Connection error.', 'error');
   }
 }
 
@@ -620,7 +685,9 @@ const handleSearch = async (query) => {
 // UTILS
 // ==========================================
 const showToast = (message, type = 'info') => {
-  toast.value = { show: true, message, type }
+  const emojis = { success: '✅', error: '⚠️', info: 'ℹ️' }
+  const emoji = emojis[type] || 'ℹ️'
+  toast.value = { show: true, message: `${emoji} ${message}`, type }
   setTimeout(() => toast.value.show = false, 3000)
 }
 
@@ -633,8 +700,20 @@ watch([allProducts, userData], () => {
 }, { immediate: true })
 
 // Lifecycle
+let syncInterval = null;
 onMounted(() => {
   fetchInitialData()
+  
+  // Keep the app "alive" with background syncs every 30 seconds
+  syncInterval = setInterval(() => {
+    if (userData.value.id !== 'guest') {
+      fetchInitialData()
+    }
+  }, 30000)
+})
+
+onUnmounted(() => {
+  if (syncInterval) clearInterval(syncInterval)
 })
 
 const showNavBar = computed(() => {
@@ -643,16 +722,14 @@ const showNavBar = computed(() => {
 </script>
 
 <template>
-  <div :class="['app-container', theme]">
+  <div class="app-container">
     <!-- DESKTOP HEADER (WEB MODE) -->
     <WebHeader 
       v-if="showNavBar" 
       :active-tab="route.name"
-      :theme="theme"
       :t="t"
       @navigate="navigateTo"
       @go-notifications="navigateTo('notifications')"
-      @toggle-theme="() => theme = (theme === 'light' ? 'dark' : 'light')"
     />
 
     <main :class="{ 'with-nav': showNavBar }">
@@ -726,7 +803,6 @@ const showNavBar = computed(() => {
           @go-tailor="(s) => navigateTo('tailor-details', { selectedSeller: s })"
           @search="handleSearch"
           @update:user-data="handleUpdateProfile"
-          @update:theme="(val) => theme = val"
           @update:language="(val) => currentLanguage = val"
           @update:role="handleUpdateRole"
           @go-help="navigateTo('help')"
@@ -770,6 +846,7 @@ const showNavBar = computed(() => {
     </div>
 
     <SpeedInsights />
+    <Analytics />
   </div>
 </template>
 

@@ -1,7 +1,7 @@
 <!-------- (VerifyCode.vue) ./src/components/VerifyCode.vue ------------>
 <script setup>
 import { ref, onMounted } from 'vue'
-const pins = ref(['', '', '', ''])
+const pins = ref(['', '', '', '', '', ''])
 const errorMessage = ref('')
 
 const emit = defineEmits(['go-back', 'submit'])
@@ -14,7 +14,7 @@ const onInput = (index, event) => {
     return
   }
   
-  if (val && index < 3) {
+  if (val && index < 5) {
     const nextEl = document.getElementById(`pin-${index + 1}`)
     if (nextEl) nextEl.focus()
   }
@@ -33,22 +33,22 @@ const onKeyDown = (index, event) => {
 
 const onPaste = (event) => {
   event.preventDefault()
-  const pastedData = event.clipboardData.getData('text').slice(0, 4).split('')
+  const pastedData = event.clipboardData.getData('text').trim().slice(0, 6).split('')
   pastedData.forEach((char, i) => {
-    if (i < 4 && /^\d$/.test(char)) {
+    if (i < 6 && /^\d$/.test(char)) {
       pins.value[i] = char
     }
   })
   // Focus last filled or next empty
-  const lastIdx = Math.min(pastedData.length, 3)
+  const lastIdx = Math.min(pastedData.length, 5)
   const el = document.getElementById(`pin-${lastIdx}`)
   if (el) el.focus()
 }
 
 const handleSubmit = () => {
   const code = pins.value.join('')
-  if (code.length < 4) {
-    errorMessage.value = 'Please enter the full 4-digit code.'
+  if (code.length < 6) {
+    errorMessage.value = 'Please enter the full 6-digit code.'
     return
   }
   errorMessage.value = ''
@@ -186,18 +186,18 @@ onMounted(() => {
 .pin-inputs {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
 }
 
 .pin-box {
   width: 100%;
   aspect-ratio: 1;
-  max-width: 60px;
+  max-width: 50px;
   border: 2px solid var(--input-border);
   border-radius: var(--radius-sm);
   background: var(--wood-walnut);
   text-align: center;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--text-primary);
   outline: none;

@@ -20,7 +20,7 @@ defineEmits(['go-back'])
       <p>Alfietz is dedicated to authentic African heritage crafts and clothing. Suppliers are strictly prohibited from listing mass-produced, counterfeit, or drop-shipped items disguised as handmade goods. We celebrate authentic artisanship.</p>
 
       <h2>2. Respectful Communication</h2>
-      <p>Whether communicating on the platform or via integrated WhatsApp links, all interactions must be professional and respectful. Harassment, hate speech, discrimination, or abusive language toward any Buyer, Supplier, or REBi Group staff will result in immediate account termination.</p>
+      <p>Whether communicating on the platform or via integrated WhatsApp links, all interactions must be professional and respectful. Harassment, hate speech, discrimination, or abusive language toward any Buyer, Supplier, or Alfietz staff will result in immediate account termination.</p>
 
       <h2>3. Honest Representation</h2>
       <p>Suppliers must accurately photograph and describe their items. Misleading buyers regarding the materials, origin, or production time of an item is a violation of our trust policies.</p>
@@ -34,7 +34,7 @@ defineEmits(['go-back'])
       </ul>
 
       <h2>5. Reporting Violations</h2>
-      <p>If you encounter a user or listing that violates these guidelines, please use the Feedback or Help section to report it to the REBi Group moderation team immediately.</p>
+      <p>If you encounter a user or listing that violates these guidelines, please use the Feedback or Help section to report it to the Alfietz moderation team immediately.</p>
     </div>
   </div>
 </template>

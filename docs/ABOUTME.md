@@ -70,7 +70,7 @@ Since its inception, Alfietz has successfully transitioned from a prototype to a
 ### 5. 💬 Communication & ⚖️ Legal
 *   **`ReviewsList.vue` / `WriteReview.vue`**: Trust-building through peer feedback.
 *   **`Help.vue` / `Feedback.vue`**: Support and community engagement channels.
-*   **`PrivacyPolicy.vue` / `TermsConditions.vue`**: Core compliance documents, including specific clauses for REBi Group's liability limitation.
+*   **`PrivacyPolicy.vue` / `TermsConditions.vue`**: Core compliance documents, including specific clauses for Alfietz's liability limitation.
 *   **`ReturnPolicy.vue`**: Differentiates between custom-made and ready-to-wear heritage items.
 *   **`CommunityGuidelines.vue`**: Establishing "The Tribe" code of conduct.
 *   **`SafetyTips.vue` / `MeasurementGuide.vue` / `IPPolicy.vue`**: Additional resources protecting users and artisans.

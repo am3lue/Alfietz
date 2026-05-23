@@ -8,7 +8,7 @@ const client = createClient({
 })
 
 async function clear() {
-  console.log("Clearing all data from African Trends Database...")
+  console.log("Clearing all data from Alfietz Database...")
 
   try {
     // Drop all tables
@@ -37,7 +37,7 @@ async function clear() {
         user_type TEXT DEFAULT 'buyer',
         needs TEXT,
         gives TEXT,
-        theme TEXT DEFAULT 'light'
+        theme TEXT DEFAULT 'dark',
       )
     `)
 

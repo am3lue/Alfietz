@@ -15,16 +15,16 @@ defineEmits(['go-back'])
       <p class="last-updated">Last Updated: May 2026</p>
       
       <h2>1. Artisan Ownership</h2>
-      <p>At Alfietz, we believe the creator is the soul of the craft. All designs, patterns, and craftsmanship uploaded by Suppliers remain the **exclusive intellectual property** of the respective artisan or brand. REBi Group does not claim ownership of your unique heritage designs.</p>
+      <p>At Alfietz, we believe the creator is the soul of the craft. All designs, patterns, and craftsmanship uploaded by Suppliers remain the **exclusive intellectual property** of the respective artisan or brand. Alfietz does not claim ownership of your unique heritage designs.</p>
 
       <h2>2. Platform License</h2>
-      <p>By uploading content (images, descriptions) to Alfietz, you grant REBi Group a non-exclusive, worldwide, royalty-free license to use, display, and share that content for the sole purpose of promoting your work and the Alfietz platform on social media, marketing materials, and within the app.</p>
+      <p>By uploading content (images, descriptions) to Alfietz, you grant Alfietz a non-exclusive, worldwide, royalty-free license to use, display, and share that content for the sole purpose of promoting your work and the Alfietz platform on social media, marketing materials, and within the app.</p>
 
       <h2>3. Protection of Designs</h2>
       <p>Users are strictly prohibited from copying, reproducing, or commercially exploiting the designs found on Alfietz without the express written consent of the original creator. We take design "scraping" seriously and will ban users found to be stealing artisan IP.</p>
 
       <h2>4. Reporting Infringement</h2>
-      <p>If you believe your intellectual property has been infringed upon by another user on our platform, please send a detailed "Notice of Infringement" to support@rebigroup.com including:</p>
+      <p>If you believe your intellectual property has been infringed upon by another user on our platform, please send a detailed "Notice of Infringement" to support@alfie.shop including:</p>
       <ul>
         <li>A description of the copyrighted work you claim has been infringed.</li>
         <li>The link to the infringing listing on Alfietz.</li>

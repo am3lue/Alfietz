@@ -7,23 +7,31 @@
 export const db = {
   /**
    * Runs a secure predefined action on the server.
-   * This is Level 3 security: frontend sends command name + params, never SQL.
-   * Authentication is handled on the server.
    */
   runAction: async (action, params = {}) => {
     try {
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      // Get token from storage
+      const token = localStorage.getItem('alfie_app_auth_token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${JSON.parse(token)}`;
+      }
+
       const response = await fetch('/api/db', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Note: In production, the API Key should be handled via session/cookies,
-          // but we keep the header for compatibility with existing Vercel setup.
-          'x-api-key': import.meta.env.VITE_APP_API_KEY || ''
-        },
+        headers,
         body: JSON.stringify({ action, params }, (key, value) =>
           typeof value === 'bigint' ? value.toString() : value
         ),
       });
+
+      if (response.status === 401) {
+        // Session expired, clear local token
+        localStorage.removeItem('alfie_app_auth_token');
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -37,6 +45,14 @@ export const db = {
     }
   },
 
+  setToken: (token) => {
+    localStorage.setItem('alfie_app_auth_token', JSON.stringify(token));
+  },
+
+  clearToken: () => {
+    localStorage.removeItem('alfie_app_auth_token');
+  },
+
   /**
    * execute is now a wrapper for runAction to maintain backwards compatibility
    * while enforcing server-side action security.
@@ -44,12 +60,10 @@ export const db = {
    */
   execute: async (query) => {
     console.warn("db.execute() is deprecated for security. Use db.runAction() instead.");
-    // We handle a few legacy cases if absolutely necessary, 
-    // but the goal is to move everything to runAction.
     return { rows: [] };
   },
 
-  // Mock batch for now if needed (though not used in current codebase)
+  // Mock batch for now if needed
   batch: async () => {
     console.warn("Batch operations are not yet implemented in proxy mode.");
     return [];

@@ -1,7 +1,7 @@
 <!-------- (Notifications.vue) ./src/components/Notifications.vue ------------>
 <script setup>
 // Define props so the parent component can pass dynamic notification data
-defineProps({
+const props = defineProps({
   notifications: {
     type: Array,
     required: true,
@@ -11,6 +11,28 @@ defineProps({
 
 // Define emits so we can tell the parent when the back button is clicked
 defineEmits(['go-back'])
+
+const formatTime = (timestamp) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diffInSeconds = Math.floor((now - date) / 1000)
+
+  if (diffInSeconds < 60) return 'Just now'
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
+  return date.toLocaleDateString()
+}
+const getEmoji = (message) => {
+  const msg = message.toLowerCase()
+  if (msg.includes('order')) return '📦'
+  if (msg.includes('negotiation') || msg.includes('offer')) return '💰'
+  if (msg.includes('message') || msg.includes('whisper') || msg.includes('chat')) return '💬'
+  if (msg.includes('review')) return '✨'
+  if (msg.includes('shipped') || msg.includes('delivery')) return '🚚'
+  if (msg.includes('kente') || msg.includes('ankara')) return '🧵'
+  return '🔔'
+}
 </script>
 
 <template>
@@ -32,18 +54,14 @@ defineEmits(['go-back'])
         v-for="item in notifications" 
         :key="item.id" 
         class="notification-card"
-        :class="{ 'is-unread': item.unread }"
+        :class="{ 'is-unread': item.is_unread }"
       >
         <div class="icon-circle">
-          <!-- Bell Icon -->
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-          </svg>
+          <span class="notification-emoji">{{ getEmoji(item.message) }}</span>
         </div>
         <div class="text-content">
-          <span class="item-name">{{ item.name }}</span>
-          <span class="item-time">{{ item.time }}</span>
+          <span class="item-name">{{ item.message }}</span>
+          <span class="item-time">{{ formatTime(item.created_at) }}</span>
         </div>
       </div>
       
@@ -112,11 +130,13 @@ defineEmits(['go-back'])
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background-color: var(--glass-border);
+  background-color: var(--wood-walnut);
+  border: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 20px;
 }
 
 .item-name {

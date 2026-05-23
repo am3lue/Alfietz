@@ -20,19 +20,32 @@ const loading = ref(true)
 const messagesContainer = ref(null)
 let pollInterval = null
 
-const otherUserId = route.params.userId
+const otherUserId = ref(route.params.userId)
 
-onMounted(async () => {
+const initChat = async () => {
+  loading.value = true
   await fetchUserDetails()
   await fetchMessages(true)
+  
+  // Mark as read
+  await markAsRead()
+}
+
+onMounted(async () => {
+  await initChat()
   
   // Simulation of Real-time: Poll every 5 seconds
   pollInterval = setInterval(() => {
     fetchMessages(false)
   }, 5000)
+})
 
-  // Mark as read
-  await markAsRead()
+watch(() => route.params.userId, async (newId) => {
+  if (newId && newId !== otherUserId.value) {
+    otherUserId.value = newId
+    messages.value = []
+    await initChat()
+  }
 })
 
 onUnmounted(() => {
@@ -41,7 +54,7 @@ onUnmounted(() => {
 
 const fetchUserDetails = async () => {
   try {
-    const res = await db.runAction('get_user_by_id', { userId: otherUserId });
+    const res = await db.runAction('get_user_by_id', { userId: otherUserId.value });
     if (res.rows.length > 0) {
       otherUser.value = res.rows[0]
     }
@@ -55,7 +68,7 @@ const fetchMessages = async (showLoading = false) => {
     if (showLoading) loading.value = true
     const res = await db.runAction('get_messages', { 
       userId: props.userData.id, 
-      otherId: otherUserId 
+      otherId: otherUserId.value 
     });
     
     // Only update if count changed to avoid unnecessary re-renders
@@ -81,7 +94,7 @@ const sendMessage = async () => {
   try {
     await db.runAction('send_message', { 
       senderId: props.userData.id, 
-      receiverId: otherUserId, 
+      receiverId: otherUserId.value, 
       content 
     });
     
@@ -89,7 +102,7 @@ const sendMessage = async () => {
     messages.value.push({
       id: Date.now(),
       sender_id: props.userData.id,
-      receiver_id: otherUserId,
+      receiver_id: otherUserId.value,
       content: content,
       created_at: new Date().toISOString()
     })
@@ -104,7 +117,7 @@ const sendMessage = async () => {
 const markAsRead = async () => {
   try {
     await db.runAction('mark_messages_read', { 
-      senderId: otherUserId, 
+      senderId: otherUserId.value, 
       receiverId: props.userData.id 
     });
   } catch (e) {
@@ -116,6 +129,10 @@ const scrollToBottom = () => {
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
   }
+}
+
+const addEmoji = (emoji) => {
+  newMessage.value += emoji
 }
 
 watch(messages, () => {
@@ -164,6 +181,16 @@ watch(messages, () => {
     </div>
 
     <div class="chat-input-area">
+      <div class="quick-emojis">
+        <button 
+          v-for="emoji in ['🏺', '✨', '🎨', '🧵', '💰', '📦', '🤝', '🦁', '🌍', '🔥']" 
+          :key="emoji"
+          class="emoji-btn"
+          @click="addEmoji(emoji)"
+        >
+          {{ emoji }}
+        </button>
+      </div>
       <div class="input-wrapper">
         <textarea 
           v-model="newMessage" 
@@ -294,10 +321,38 @@ watch(messages, () => {
 }
 
 .chat-input-area {
-  padding: 16px 20px 32px;
+  padding: 12px 20px 32px;
   background: var(--glass-bg);
   backdrop-filter: blur(20px);
   border-top: 1px solid var(--glass-border);
+}
+
+.quick-emojis {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.quick-emojis::-webkit-scrollbar { display: none; }
+
+.emoji-btn {
+  background: var(--wood-walnut);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.emoji-btn:hover {
+  transform: scale(1.15);
+  border-color: var(--accent-amber);
+  background: var(--wood-polished);
 }
 
 .input-wrapper {

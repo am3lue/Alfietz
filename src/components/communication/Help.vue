@@ -55,7 +55,7 @@ const navigateTo = (routeName) => {
 
       <div class="legal-section">
         <h3>Legal Documents</h3>
-        <p class="section-desc">Review our policies to understand your rights and responsibilities on the Alfietz platform, protected by REBi Group.</p>
+        <p class="section-desc">Review our policies to understand your rights and responsibilities on the Alfietz platform.</p>
         
         <div class="legal-links">
           <button class="legal-link-btn" @click="navigateTo('terms')">
@@ -79,7 +79,7 @@ const navigateTo = (routeName) => {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
           </button>
           <button class="legal-link-btn" @click="navigateTo('about')">
-            <span>About REBi Group</span>
+            <span>About Alfietz</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
           </button>
         </div>
@@ -100,7 +100,7 @@ const navigateTo = (routeName) => {
         
         <div class="faq-item">
           <h4>How do I report a problem?</h4>
-          <p>If you encounter issues with an order or a user, please use the Feedback section or email support@rebigroup.com.</p>
+          <p>If you encounter issues with an order or a user, please use the Feedback section or email support@alfie.shop.</p>
         </div>
       </div>
 

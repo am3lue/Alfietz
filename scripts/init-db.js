@@ -9,7 +9,7 @@ const client = createClient({
 })
 
 async function init() {
-  console.log("Initializing Turso Database for African Trends...")
+  console.log("Initializing Turso Database for Alfietz...")
 
   try {
     // 1. Drop existing tables in correct order
@@ -22,6 +22,9 @@ async function init() {
     await client.execute("DROP TABLE IF EXISTS sellers")
     await client.execute("DROP TABLE IF EXISTS categories")
     await client.execute("DROP TABLE IF EXISTS users")
+    await client.execute("DROP TABLE IF EXISTS messages")
+    await client.execute("DROP TABLE IF EXISTS orders")
+    await client.execute("DROP TABLE IF EXISTS negotiations")
 
     // 2. Create tables
     await client.execute(`
@@ -66,20 +69,6 @@ async function init() {
         gallery_json TEXT,
         FOREIGN KEY(category_id) REFERENCES categories(id),
         FOREIGN KEY(owner_id) REFERENCES users(id)
-      )
-    `)
-
-    await client.execute(`
-      CREATE TABLE sellers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        specialty TEXT,
-        bio TEXT,
-        rating REAL,
-        likes_count INTEGER DEFAULT 0,
-        clients_count INTEGER DEFAULT 0,
-        avatar TEXT,
-        is_verified BOOLEAN DEFAULT 0
       )
     `)
 
@@ -139,13 +128,64 @@ async function init() {
       )
     `)
 
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id TEXT,
+        receiver_id TEXT,
+        content TEXT,
+        is_read BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id TEXT PRIMARY KEY,
+        item_name TEXT,
+        customer_id TEXT,
+        tailor_id TEXT,
+        price TEXT,
+        status TEXT DEFAULT 'Pending',
+        size TEXT,
+        color TEXT,
+        notes TEXT,
+        image TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS negotiations (
+        id TEXT PRIMARY KEY,
+        item_name TEXT,
+        customer_id TEXT,
+        tailor_id TEXT,
+        proposed_price TEXT,
+        status TEXT DEFAULT 'Awaiting Reply',
+        size TEXT,
+        color TEXT,
+        notes TEXT,
+        image TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS rate_limits (
+        key TEXT PRIMARY KEY,
+        count INTEGER DEFAULT 0,
+        expires_at INTEGER
+      )
+    `)
+
     console.log("Tables created successfully.")
 
     // 2.5 Insert Default Guest User with Hashed Password
     const hashedPassword = await bcrypt.hash('password123', 10)
     await client.execute({
       sql: "INSERT INTO users (id, username, first_name, last_name, email, password, whatsapp, avatar, user_type, theme) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      args: ['guest', 'johnabram', 'John', 'Abram', 'johnabram@gmail.com', hashedPassword, '+255700000000', 'https://i.pravatar.cc/150?u=johnabram', 'buyer', 'light']
+      args: ['guest', 'johnabram', 'John', 'Abram', 'johnabram@gmail.com', hashedPassword, '+255700000000', 'https://i.pravatar.cc/150?u=johnabram', 'buyer', 'dark']
     })
 
     // 2.6 Seed Initial Notifications

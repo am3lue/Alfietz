@@ -18,14 +18,14 @@ defineEmits(['go-back'])
         <div class="logo-container">
           <img src="../../assets/logo.png" alt="Alfie Logo" class="logo-img" />
         </div>
-        <p class="company-name">By REBi Group</p>
+        <p class="company-name">Independent Heritage Marketplace</p>
       </div>
 
       <!-- Mission Statement -->
       <div class="mission-card">
-        <h3>The Spirit of AfriFashion</h3>
+        <h3>The Spirit of Alfietz</h3>
         <p>
-          At <strong>African Trends</strong>, we believe that fashion is the ultimate storyteller of heritage. 
+          At <strong>Alfietz</strong>, we believe that fashion is the ultimate storyteller of heritage. 
           Our platform serves as a vibrant bridge connecting the world with the soulful craftsmanship 
           of master tailors and visionary designers across the continent.
         </p>
@@ -40,7 +40,7 @@ defineEmits(['go-back'])
       <!-- App Version -->
       <div class="version-info">
         <p>Celebrating Heritage Since 2024</p>
-        <p>© 2024 REBi Group - African Trends Initiative</p>
+        <p>© 2024 Alfietz - African Heritage Initiative</p>
       </div>
     </div>
   </div>

@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
+import { Resend } from 'resend';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,6 +12,45 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+const sanitize = (val) => typeof val === 'bigint' ? val.toString() : val;
+
+async function checkRateLimit(client, key, limit, windowSeconds) {
+  const now = Math.floor(Date.now() / 1000);
+  
+  // Clean up expired entries for this key
+  await client.execute({
+    sql: "DELETE FROM rate_limits WHERE expires_at < ?",
+    args: [now]
+  });
+
+  const res = await client.execute({
+    sql: "SELECT count, expires_at FROM rate_limits WHERE key = ?",
+    args: [key]
+  });
+
+  if (res.rows.length > 0) {
+    const row = res.rows[0];
+    const count = parseInt(sanitize(row[0]));
+    const expiresAt = parseInt(sanitize(row[1]));
+
+    if (count >= limit) {
+      return { allowed: false, remaining: 0, reset: expiresAt - now };
+    }
+
+    await client.execute({
+      sql: "UPDATE rate_limits SET count = count + 1 WHERE key = ?",
+      args: [key]
+    });
+    return { allowed: true, remaining: limit - (count + 1) };
+  } else {
+    await client.execute({
+      sql: "INSERT INTO rate_limits (key, count, expires_at) VALUES (?, 1, ?)",
+      args: [key, now + windowSeconds]
+    });
+    return { allowed: true, remaining: limit - 1 };
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -18,37 +58,76 @@ export default async function handler(req, res) {
 
   const url = process.env.TURSO_URL || process.env.VITE_TURSO_URL;
   const authToken = process.env.TURSO_AUTH_TOKEN || process.env.VITE_TURSO_AUTH_TOKEN;
+  const resendApiKey = process.env.RESEND_API_KEY;
 
   if (!url || !authToken) {
     return res.status(500).json({ error: 'Database configuration missing' });
   }
 
-  // Security Check: Shared Secret
-  const apiKey = req.headers['x-api-key'];
-  const serverSecret = process.env.APP_API_KEY || process.env.VITE_APP_API_KEY;
-
-  if (!apiKey || apiKey !== serverSecret) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const { action, params } = req.body;
+  const { action, params = {} } = req.body || {};
 
   if (!action) {
     return res.status(400).json({ error: 'Action is required. Raw SQL is disabled for security.' });
   }
 
-  const sanitize = (val) => typeof val === 'bigint' ? val.toString() : val;
-  const mapRows = (result) => {
-    return result.rows.map(row => {
-      const obj = {};
-      result.columns.forEach((col, i) => { obj[col] = sanitize(row[i]); });
-      return obj;
-    });
-  };
-
   try {
     const startTime = Date.now();
     const client = createClient({ url, authToken });
+    const resend = resendApiKey ? new Resend(resendApiKey) : null;
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+
+    // Auto-migrate: Ensure required tables exist
+    await client.execute("CREATE TABLE IF NOT EXISTS rate_limits (key TEXT PRIMARY KEY, count INTEGER, expires_at INTEGER)");
+    await client.execute("CREATE TABLE IF NOT EXISTS verification_codes (email TEXT PRIMARY KEY, code TEXT, expires_at INTEGER)");
+    await client.execute("CREATE TABLE IF NOT EXISTS session_tokens (token TEXT PRIMARY KEY, user_id TEXT, expires_at INTEGER)");
+
+    // Token Validation for Protected Actions
+    const publicActions = ['login', 'signup', 'request_password_reset', 'verify_reset_code', 'reset_password', 'get_initial_data', 'search', 'get_product_details', 'get_tailor_details', 'get_reviews', 'get_similar_products'];
+    let currentUserId = 'guest';
+
+    if (!publicActions.includes(action)) {
+      const authHeader = req.headers['authorization'];
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authentication required for this action.' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const sessionRes = await client.execute({
+        sql: "SELECT user_id, expires_at FROM session_tokens WHERE token = ?",
+        args: [token]
+      });
+
+      if (sessionRes.rows.length === 0) {
+        return res.status(401).json({ error: 'Invalid or expired session.' });
+      }
+
+      const session = sessionRes.rows[0];
+      const now = Math.floor(Date.now() / 1000);
+      if (parseInt(sanitize(session[1])) < now) {
+        await client.execute({ sql: "DELETE FROM session_tokens WHERE token = ?", args: [token] });
+        return res.status(401).json({ error: 'Session expired. Please log in again.' });
+      }
+
+      currentUserId = sanitize(session[0]);
+      // Ensure the params.userId matches the token's user_id if provided
+      if (params.userId && params.userId !== currentUserId) {
+        return res.status(403).json({ error: 'Unauthorized access to this user data.' });
+      }
+    }
+
+    // Global Rate Limit: 100 requests per minute per IP
+    const globalLimit = await checkRateLimit(client, `global:${ip}`, 100, 60);
+    if (!globalLimit.allowed) {
+      return res.status(429).json({ error: `Too many requests. Please try again in ${globalLimit.reset} seconds.` });
+    }
+
+    const mapRows = (result) => {
+      return result.rows.map(row => {
+        const obj = {};
+        result.columns.forEach((col, i) => { obj[col] = sanitize(row[i]); });
+        return obj;
+      });
+    };
 
     let sql = '';
     let args = [];
@@ -115,7 +194,7 @@ export default async function handler(req, res) {
       case 'get_product_details':
         const prodRes = await client.execute({
           sql: `
-            SELECT p.*, u.username as owner_username, u.first_name, u.last_name, u.avatar as owner_avatar, c.name as categoryName
+            SELECT p.*, u.username as owner_username, u.first_name, u.last_name, u.avatar as owner_avatar, u.whatsapp as sellerPhone, c.name as categoryName
             FROM products p
             LEFT JOIN users u ON p.owner_id = u.id
             LEFT JOIN categories c ON p.category_id = c.id
@@ -148,6 +227,12 @@ export default async function handler(req, res) {
         break;
 
       case 'login':
+        // Auth Rate Limit: 10 attempts per 15 minutes per IP
+        const authLimit = await checkRateLimit(client, `login:${ip}`, 10, 900);
+        if (!authLimit.allowed) {
+          return res.status(429).json({ error: `Too many login attempts. Please try again in ${Math.ceil(authLimit.reset / 60)} minutes.` });
+        }
+
         const loginRes = await client.execute({
           sql: 'SELECT * FROM users WHERE email = ?',
           args: [params.email]
@@ -172,17 +257,44 @@ export default async function handler(req, res) {
         // Return user WITHOUT password
         const userObj = {};
         loginRes.columns.forEach((col, i) => { if (col !== 'password') userObj[col] = sanitize(user[i]); });
-        customResponse = { user: userObj };
+        
+        // Generate Session Token
+        const sessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        const sessionExpires = Math.floor(Date.now() / 1000) + (86400 * 7); // 7 days
+        await client.execute({
+          sql: "INSERT INTO session_tokens (token, user_id, expires_at) VALUES (?, ?, ?)",
+          args: [sessionToken, userObj.id, sessionExpires]
+        });
+
+        customResponse = { user: userObj, token: sessionToken };
         break;
 
       case 'signup':
+        // Signup Rate Limit: 5 attempts per hour per IP
+        const signupLimit = await checkRateLimit(client, `signup:${ip}`, 5, 3600);
+        if (!signupLimit.allowed) {
+          return res.status(429).json({ error: `Too many signup attempts. Please try again in ${Math.ceil(signupLimit.reset / 60)} minutes.` });
+        }
+
         // Check if exists
         const exists = await client.execute({ sql: 'SELECT id FROM users WHERE email = ? OR username = ?', args: [params.email, params.username] });
         if (exists.rows.length > 0) return res.status(400).json({ error: 'Email or username already taken' });
 
         const hashedPassword = await bcrypt.hash(params.password, 10);
         sql = 'INSERT INTO users (id, username, first_name, last_name, email, password, whatsapp, avatar, user_type, needs, gives, theme) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-        args = [params.id, params.username, params.firstName, params.lastName, params.email, hashedPassword, params.whatsapp, params.avatar, params.userType, params.needs, params.gives, 'light'];
+        args = [params.id, params.username, params.firstName, params.lastName, params.email, hashedPassword, params.whatsapp, params.avatar, params.userType, params.needs, params.gives, 'dark'];
+        
+        // Generate Token for Signup too
+        const stoken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        const sexpires = Math.floor(Date.now() / 1000) + (86400 * 7);
+        await client.execute({
+          sql: "INSERT INTO session_tokens (token, user_id, expires_at) VALUES (?, ?, ?)",
+          args: [stoken, params.id, sexpires]
+        });
+
+        // We need to return the token, so we override the standard execute flow
+        await client.execute({ sql, args });
+        customResponse = { success: true, token: stoken };
         break;
 
       case 'create_negotiation':
@@ -225,7 +337,13 @@ export default async function handler(req, res) {
         break;
 
       case 'get_orders':
-        sql = 'SELECT * FROM orders WHERE customer_id = ? OR tailor_id = ? ORDER BY created_at DESC';
+        sql = `
+          SELECT o.*, u.first_name as tailor_first_name, u.last_name as tailor_last_name, u.username as tailor_name, u.whatsapp as tailor_phone
+          FROM orders o
+          LEFT JOIN users u ON o.tailor_id = u.id
+          WHERE o.customer_id = ? OR o.tailor_id = ? 
+          ORDER BY o.created_at DESC
+        `;
         args = [params.userId, params.userId];
         break;
 
@@ -297,9 +415,122 @@ export default async function handler(req, res) {
         break;
 
       case 'reset_password':
+        // Reset Rate Limit: 3 attempts per hour per IP
+        const resetLimit = await checkRateLimit(client, `reset:${ip}`, 3, 3600);
+        if (!resetLimit.allowed) {
+          return res.status(429).json({ error: `Too many password reset attempts. Please try again later.` });
+        }
+
+        // Verify the code first
+        const codeRes = await client.execute({
+          sql: "SELECT code, expires_at FROM verification_codes WHERE email = ?",
+          args: [params.email]
+        });
+
+        if (codeRes.rows.length === 0) {
+          return res.status(400).json({ error: "No verification code found for this email." });
+        }
+
+        const storedCode = codeRes.rows[0];
+        const now = Math.floor(Date.now() / 1000);
+
+        if (parseInt(sanitize(storedCode[1])) < now) {
+          return res.status(400).json({ error: "Verification code has expired." });
+        }
+
+        if (sanitize(storedCode[0]) !== params.code) {
+          return res.status(400).json({ error: "Invalid verification code." });
+        }
+
         const hashedPass = await bcrypt.hash(params.password, 10);
-        sql = 'UPDATE users SET password = ? WHERE email = ?';
-        args = [hashedPass, params.email];
+        await client.execute({
+          sql: 'UPDATE users SET password = ? WHERE email = ?',
+          args: [hashedPass, params.email]
+        });
+
+        // Delete the code after successful reset
+        await client.execute({
+          sql: "DELETE FROM verification_codes WHERE email = ?",
+          args: [params.email]
+        });
+
+        customResponse = { success: true };
+        break;
+
+      case 'request_password_reset':
+        // Rate limit reset requests: 3 per hour per IP
+        const reqLimit = await checkRateLimit(client, `req_reset:${ip}`, 3, 3600);
+        if (!reqLimit.allowed) {
+          return res.status(429).json({ error: "Too many reset requests. Please try again in an hour." });
+        }
+
+        // Check if user exists
+        const userExists = await client.execute({
+          sql: "SELECT id FROM users WHERE email = ?",
+          args: [params.email]
+        });
+
+        if (userExists.rows.length === 0) {
+          return res.status(404).json({ error: "No user found with this email." });
+        }
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expires = Math.floor(Date.now() / 1000) + 1800; // 30 minutes
+
+        await client.execute({
+          sql: "INSERT OR REPLACE INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)",
+          args: [params.email, otp, expires]
+        });
+
+        // Send Email via Resend
+        if (resend) {
+          const { data, error } = await resend.emails.send({
+            from: 'Alfietz <info@alfie.shop>',
+            to: params.email,
+            subject: 'Your Heritage Verification Code',
+            template: { 
+              id: '374690a1-273f-4ed3-85ef-7608bc84acaf',
+              variables: {
+                VERIFICATION_CODE: otp
+              }
+            }
+          });
+          if (error) {
+            console.error('Email Sending Error:', error);
+          }
+        }
+
+        console.log(`[AUTH] Password reset OTP for ${params.email}: ${otp}`);
+        
+        customResponse = { 
+          success: true, 
+          message: "Verification code sent to your email.",
+          code: process.env.NODE_ENV === 'development' ? otp : undefined 
+        };
+        break;
+
+      case 'verify_reset_code':
+        // Code verification Rate Limit: 5 attempts per 15 minutes per IP
+        const vLimit = await checkRateLimit(client, `verify_code:${ip}`, 5, 900);
+        if (!vLimit.allowed) {
+          return res.status(429).json({ error: "Too many verification attempts. Please try again in 15 minutes." });
+        }
+
+        const vCodeRes = await client.execute({
+          sql: "SELECT code, expires_at FROM verification_codes WHERE email = ?",
+          args: [params.email]
+        });
+
+        if (vCodeRes.rows.length === 0) return res.status(400).json({ error: "No code found." });
+        
+        const vStored = vCodeRes.rows[0];
+        const vNow = Math.floor(Date.now() / 1000);
+
+        if (parseInt(sanitize(vStored[1])) < vNow) return res.status(400).json({ error: "Code expired." });
+        if (sanitize(vStored[0]) !== params.code) return res.status(400).json({ error: "Invalid code." });
+
+        customResponse = { success: true };
         break;
 
       case 'create_product':
@@ -313,8 +544,42 @@ export default async function handler(req, res) {
         break;
 
       case 'create_order':
-        sql = 'INSERT INTO orders (id, item_name, customer_id, tailor_id, price, status, size, color, notes, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-        args = [params.id, params.itemName, params.customerId, params.tailorId, params.price, 'Pending', params.size, params.color, params.notes, params.image];
+        await client.execute({
+          sql: 'INSERT INTO orders (id, item_name, customer_id, tailor_id, price, status, size, color, notes, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          args: [params.id, params.itemName, params.customerId, params.tailorId, params.price, 'Pending', params.size, params.color, params.notes, params.image]
+        });
+
+        // Send Order Confirmation Email
+        if (resend) {
+          const customerRes = await client.execute({
+            sql: "SELECT email, first_name FROM users WHERE id = ?",
+            args: [params.customerId]
+          });
+          
+          if (customerRes.rows.length > 0) {
+            const customer = customerRes.rows[0];
+            const { data, error } = await resend.emails.send({
+              from: 'Alfietz <info@alfie.shop>',
+              to: sanitize(customer[0]),
+              subject: 'Your Heritage Order is Confirmed!',
+              template: { 
+                id: 'order-confirmation',
+                variables: {
+                  NAME: sanitize(customer[1]),
+                  PRODUCT: params.itemName,
+                  PRICE: params.price,
+                  SIZE: params.size,
+                  COLOR: params.color
+                }
+              }
+            });
+            if (error) {
+              console.error('Order Email Error:', error);
+            }
+          }
+        }
+        
+        customResponse = { success: true };
         break;
 
       case 'submit_feedback':
@@ -369,7 +634,10 @@ export default async function handler(req, res) {
       return res.status(200).json(customResponse);
     }
 
-    const result = await client.execute({ sql, args });
+    const result = await client.execute({ 
+      sql, 
+      args: args.map(arg => arg === undefined ? null : arg) 
+    });
     const rows = mapRows(result);
 
     return res.status(200).json({

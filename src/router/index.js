@@ -39,6 +39,9 @@ const routes = [
   { path: '/legal/safety', name: 'safety', component: () => import('../components/legal/SafetyTips.vue') },
   { path: '/legal/measurements', name: 'measurements', component: () => import('../components/legal/MeasurementGuide.vue') },
   { path: '/legal/ip-policy', name: 'ip-policy', component: () => import('../components/legal/IPPolicy.vue') },
+  { path: '/403', name: 'forbidden', component: () => import('../components/layout/ErrorPage.vue'), props: { code: 403 } },
+  { path: '/500', name: 'server-error', component: () => import('../components/layout/ErrorPage.vue'), props: { code: 500 } },
+  { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../components/layout/ErrorPage.vue'), props: { code: 404 } },
 ]
 
 const router = createRouter({

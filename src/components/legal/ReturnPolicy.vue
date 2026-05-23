@@ -14,7 +14,7 @@ defineEmits(['go-back'])
     <div class="content-scroll">
       <p class="last-updated">Last Updated: May 2026</p>
       
-      <p>At Alfietz, operated by REBi Group, we strive to ensure every heritage item meets your expectations. Because our marketplace features both ready-to-wear items and bespoke (custom-made) garments, our return policy varies by item type.</p>
+      <p>At Alfietz, we strive to ensure every heritage item meets your expectations. Because our marketplace features both ready-to-wear items and bespoke (custom-made) garments, our return policy varies by item type.</p>
 
       <h2>1. Custom & Bespoke Garments</h2>
       <p>Because custom garments are created specifically to your provided measurements, <strong>they are generally non-refundable and non-returnable</strong> unless there is a verifiable material defect or a significant deviation from the agreed-upon design.</p>
@@ -31,10 +31,10 @@ defineEmits(['go-back'])
       </ul>
 
       <h2>3. Return Process & Shipping</h2>
-      <p>As REBi Group connects Buyers and Suppliers, <strong>all return logistics must be coordinated directly between the Buyer and the Supplier</strong> (usually via WhatsApp). Unless the item is defective, the Buyer is typically responsible for return shipping costs.</p>
+      <p>As Alfietz connects Buyers and Suppliers, <strong>all return logistics must be coordinated directly between the Buyer and the Supplier</strong> (usually via WhatsApp). Unless the item is defective, the Buyer is typically responsible for return shipping costs.</p>
 
       <h2>4. Dispute Resolution</h2>
-      <p>If a Buyer and Supplier cannot agree on a return or refund, REBi Group may, at its sole discretion, review the communication and listing details to mediate. However, REBi Group cannot mandate refunds for transactions processed outside our platform.</p>
+      <p>If a Buyer and Supplier cannot agree on a return or refund, Alfietz may, at its sole discretion, review the communication and listing details to mediate. However, Alfietz cannot mandate refunds for transactions processed outside our platform.</p>
     </div>
   </div>
 </template>

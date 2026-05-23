@@ -77,9 +77,4 @@ defineEmits(['view-all'])
 .view-all-btn:hover .chevron-icon {
   transform: translateX(2px);
 }
-
-/* Dark theme specific adjustments if needed */
-.dark-theme .view-all-btn:hover {
-  background-color: var(--wood-polished);
-}
 </style>

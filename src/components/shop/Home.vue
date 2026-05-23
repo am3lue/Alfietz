@@ -54,7 +54,7 @@ watch(searchQuery, (newVal) => {
         <input 
           type="text" 
           v-model="searchQuery" 
-          placeholder="Search for cultural trends, fabrics, or artifacts..." 
+          :placeholder="t('searchPlaceholder')" 
           class="search-input" 
           @keyup.enter="handleSearch"
           aria-label="Search input"
@@ -70,7 +70,7 @@ watch(searchQuery, (newVal) => {
     <!-- Featured Collections (Sleek Modules) -->
     <section class="section">
       <div class="section-header-row">
-        <h2 class="tech-section-title">Heritage Collections</h2>
+        <h2 class="tech-section-title">{{ t('heritageCollections') }}</h2>
       </div>
       <div class="scroll-container collections-grid">
         <div class="collection-module kente group" @click="$emit('go-explore', 'Kente Royal')">
@@ -107,7 +107,7 @@ watch(searchQuery, (newVal) => {
 
     <!-- Categories Section -->
     <section class="section">
-      <SectionHeader title="Categories" @view-all="$emit('go-categories')" />
+      <SectionHeader :title="t('categories')" @view-all="$emit('go-categories')" />
       <div class="scroll-container">
         <div 
           v-for="category in categories" 
@@ -127,7 +127,7 @@ watch(searchQuery, (newVal) => {
 
     <!-- Trending Products Section -->
     <section class="section">
-      <SectionHeader title="Trending products" @view-all="$emit('go-trending')" />
+      <SectionHeader :title="t('trendingProducts')" @view-all="$emit('go-trending')" />
       <div class="scroll-container">
         <!-- Skeletons -->
         <template v-if="isLoading && !trendingProducts.length">
@@ -150,7 +150,7 @@ watch(searchQuery, (newVal) => {
 
     <!-- Trending Sellers Section -->
     <section class="section">
-      <SectionHeader title="Trending Sellers" :show-view-all="false" />
+      <SectionHeader :title="t('trendingSellers')" :show-view-all="false" />
       <div class="scroll-container">
         <!-- Skeletons -->
         <template v-if="isLoading && !trendingSellers.length">
@@ -172,7 +172,7 @@ watch(searchQuery, (newVal) => {
 
     <!-- Explore More Section -->
     <section class="section">
-      <SectionHeader title="Explore more" @view-all="$emit('go-explore')" />
+      <SectionHeader :title="t('exploreMore')" @view-all="$emit('go-explore')" />
       <div class="explore-grid">
         <ProductCard 
           v-for="item in exploreItems" 
@@ -188,8 +188,8 @@ watch(searchQuery, (newVal) => {
     <!-- Tribe Experiences (App Reviews) -->
     <section v-if="appReviews.length > 0" class="section">
       <div class="section-header-row">
-        <h2 class="tech-section-title">Tribe Experiences</h2>
-        <button class="view-all-link" @click="$emit('navigate', 'reviews', { isApp: true })">View All →</button>
+        <h2 class="tech-section-title">{{ t('tribeExperiences') }}</h2>
+        <button class="view-all-link" @click="$emit('navigate', 'reviews', { isApp: true })">{{ t('viewAll') }} →</button>
       </div>
       <div class="scroll-container tribe-feedback-scroll">
         <div v-for="rev in appReviews" :key="rev.id" class="feedback-bubble-card">
@@ -206,7 +206,7 @@ watch(searchQuery, (newVal) => {
         </div>
         <div class="feedback-cta-card" @click="$emit('navigate', 'app-review')">
           <div class="cta-plus">+</div>
-          <span>Share your journey</span>
+          <span>{{ t('shareJourney') }}</span>
         </div>
       </div>
     </section>

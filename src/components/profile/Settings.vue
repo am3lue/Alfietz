@@ -6,10 +6,6 @@ const props = defineProps({
     type: Object,
     required: true
   },
-  theme: {
-    type: String,
-    default: 'light'
-  },
   language: {
     type: String,
     default: 'en'
@@ -20,12 +16,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['go-back', 'go-help', 'go-privacy', 'go-terms', 'go-about', 'go-feedback', 'update:theme', 'update:language', 'update:role', 'logout'])
-
-const toggleTheme = () => {
-  const newTheme = props.theme === 'light' ? 'dark' : 'light'
-  emit('update:theme', newTheme)
-}
+const emit = defineEmits(['go-back', 'go-help', 'go-privacy', 'go-terms', 'go-about', 'go-feedback', 'update:language', 'update:role', 'logout'])
 
 const setLanguage = (lang) => {
   emit('update:language', lang)
@@ -109,20 +100,6 @@ const openWhatsAppSupport = () => {
 
       <!-- Right Column -->
       <div class="settings-column">
-        <!-- Section: Personalization -->
-        <section class="settings-card">
-          <h3 class="card-label">Preferences</h3>
-          <div class="list-item tap-active" @click="handleAction(toggleTheme)">
-            <div class="item-lead">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-              <span>Dark Appearance</span>
-            </div>
-            <div class="custom-toggle" :class="{ 'on': theme === 'dark' }">
-              <div class="handle"></div>
-            </div>
-          </div>
-        </section>
-
         <!-- Section: Support & Legal -->
         <section class="settings-card">
           <h3 class="card-label">Support & Resources</h3>
@@ -152,7 +129,7 @@ const openWhatsAppSupport = () => {
     <!-- Dangerous Area -->
     <button class="logout-btn tap-active" @click="handleAction(() => $emit('logout'))">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      <span>Logout from Heritage</span>
+      <span>{{ t('logoutHeritage') }}</span>
     </button>
   </div>
 </template>
