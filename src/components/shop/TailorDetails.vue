@@ -80,7 +80,7 @@ const loadTailorData = async () => {
       ...sellerData.value,
       id: s.id,
       owner_id: s.id,
-      name: `${s.first_name} ${s.last_name}`,
+      name: (s.first_name || s.last_name) ? `${s.first_name || ''} ${s.last_name || ''}`.trim() : s.username,
       username: s.username,
       avatar: s.avatar,
       bio: s.gives,
@@ -98,7 +98,10 @@ const loadTailorData = async () => {
       tailorStats.value.clients = data.stats.total_clients || 0
     }
 
-    reviews.value = data.reviews
+    reviews.value = data.reviews.map(r => ({
+      ...r,
+      author_name: (r.first_name || r.last_name) ? `${r.first_name || ''} ${r.last_name || ''}`.trim() : r.username
+    }))
   } catch (e) {
     console.error("Error fetching tailor details:", e)
   } finally {

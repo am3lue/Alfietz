@@ -32,22 +32,6 @@ const myProducts = ref([])
 const activeTab = ref('dashboard')
 const recentActivity = ref([])
 
-// ... (fetchData logic update)
-    // 5. Activity Feed
-    const events = []
-    
-    // Recent orders
-    activeOrders.value.slice(0, 3).forEach(o => {
-      events.push({ id: `o-${o.id}`, type: 'order', title: 'New Order', desc: `Ordered ${o.item}`, time: o.date, icon: '📦' })
-    })
-    
-    // Recent negotiations
-    negotiations.value.filter(n => n.status === 'Awaiting Reply').slice(0, 2).forEach(n => {
-      events.push({ id: `n-${n.id}`, type: 'neg', title: 'New Offer', desc: `${n.customer} offered ${n.offer}`, time: 'Just now', icon: '💰' })
-    })
-    
-    recentActivity.value = events.sort(() => 0.5 - Math.random())
-
 // Dialog State
 const dialog = ref({
   show: false,

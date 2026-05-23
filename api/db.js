@@ -142,7 +142,7 @@ export default async function handler(req, res) {
         const [tProds, tStats, tRevs] = await Promise.all([
           client.execute({ sql: "SELECT p.*, c.name as categoryName FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.owner_id = ? ORDER BY p.id DESC", args: [tailorId] }),
           client.execute({ sql: "SELECT (SELECT SUM(likes_count) FROM products WHERE owner_id = ?) as total_likes, (SELECT COUNT(*) FROM orders WHERE tailor_id = ?) as total_clients", args: [tailorId, tailorId] }),
-          client.execute({ sql: "SELECT r.*, u.first_name as author_name, u.avatar as author_avatar FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.product_id IN (SELECT id FROM products WHERE owner_id = ?) ORDER BY r.created_at DESC LIMIT 3", args: [tailorId] })
+          client.execute({ sql: "SELECT r.*, u.first_name, u.last_name, u.username, u.avatar as author_avatar FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.product_id IN (SELECT id FROM products WHERE owner_id = ?) ORDER BY r.created_at DESC LIMIT 3", args: [tailorId] })
         ]);
         customResponse = { tailor: mapRows(tailorRes)[0], products: mapRows(tProds), stats: mapRows(tStats)[0], reviews: mapRows(tRevs) };
         break;
@@ -234,7 +234,7 @@ export default async function handler(req, res) {
           client.execute({ sql: "SELECT * FROM orders WHERE tailor_id = ? ORDER BY created_at DESC", args: [params.userId] }),
           client.execute({ sql: "SELECT * FROM negotiations WHERE tailor_id = ? ORDER BY created_at DESC", args: [params.userId] }),
           client.execute({ sql: "SELECT p.*, c.name as categoryName FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.owner_id = ? ORDER BY p.id DESC", args: [params.userId] }),
-          client.execute({ sql: "SELECT r.*, u.username as author_name, u.avatar as author_avatar FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.product_id IN (SELECT id FROM products WHERE owner_id = ?) ORDER BY r.created_at DESC LIMIT 5", args: [params.userId] })
+          client.execute({ sql: "SELECT r.*, u.first_name, u.last_name, u.username, u.avatar as author_avatar FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.product_id IN (SELECT id FROM products WHERE owner_id = ?) ORDER BY r.created_at DESC LIMIT 5", args: [params.userId] })
         ]);
         customResponse = { orders: mapRows(cOrders), negotiations: mapRows(cNegs), products: mapRows(cProducts), reviews: mapRows(cRevs) };
         break;
@@ -294,6 +294,67 @@ export default async function handler(req, res) {
       case 'increment_views':
         sql = "UPDATE users SET profile_views = profile_views + 1 WHERE id = ?";
         args = [params.userId];
+        break;
+
+      case 'reset_password':
+        const hashedPass = await bcrypt.hash(params.password, 10);
+        sql = 'UPDATE users SET password = ? WHERE email = ?';
+        args = [hashedPass, params.email];
+        break;
+
+      case 'create_product':
+        sql = 'INSERT INTO products (name, price, description, material, image, category_id, owner_id, status, variants_json, gallery_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        args = [params.name, params.price, params.description, params.material, params.image, params.category_id, params.owner_id, params.status, JSON.stringify(params.colors), JSON.stringify(params.gallery)];
+        break;
+
+      case 'update_product':
+        sql = 'UPDATE products SET name = ?, price = ?, description = ?, material = ?, image = ?, category_id = ?, status = ?, variants_json = ?, gallery_json = ? WHERE id = ? AND owner_id = ?';
+        args = [params.name, params.price, params.description, params.material, params.image, params.category_id, params.status, JSON.stringify(params.colors), JSON.stringify(params.gallery), params.id, params.owner_id];
+        break;
+
+      case 'create_order':
+        sql = 'INSERT INTO orders (id, item_name, customer_id, tailor_id, price, status, size, color, notes, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        args = [params.id, params.itemName, params.customerId, params.tailorId, params.price, 'Pending', params.size, params.color, params.notes, params.image];
+        break;
+
+      case 'submit_feedback':
+        sql = 'INSERT INTO feedback (user_id, message) VALUES (?, ?)';
+        args = [params.userId, params.message];
+        break;
+
+      case 'get_reviews':
+        if (params.isApp) {
+          sql = "SELECT r.*, u.first_name, u.last_name, u.username, u.avatar FROM app_reviews r JOIN users u ON r.user_id = u.id ORDER BY r.created_at DESC";
+          args = [];
+        } else if (params.productId) {
+          sql = `
+            SELECT r.*, u.first_name, u.last_name, u.username, u.avatar, p.name as product_name, p.image as product_image 
+            FROM reviews r 
+            JOIN users u ON r.user_id = u.id 
+            JOIN products p ON r.product_id = p.id
+            WHERE r.product_id = ? 
+            ORDER BY r.created_at DESC
+          `;
+          args = [params.productId];
+        } else if (params.tailorId) {
+          sql = `
+            SELECT r.*, u.first_name, u.last_name, u.username, u.avatar, 
+                   p.name as product_name, p.image as product_image,
+                   t.first_name as tailor_first, t.last_name as tailor_last, t.username as tailor_username
+            FROM reviews r 
+            JOIN users u ON r.user_id = u.id 
+            JOIN products p ON r.product_id = p.id
+            JOIN users t ON p.owner_id = t.id
+            WHERE p.owner_id = ? 
+            ORDER BY r.created_at DESC
+          `;
+          args = [params.tailorId];
+        }
+        break;
+
+      case 'update_negotiation_status':
+        sql = 'UPDATE negotiations SET status = ? WHERE id = ?';
+        args = [params.status, params.negotiationId];
         break;
 
       default:

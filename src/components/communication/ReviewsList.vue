@@ -65,15 +65,18 @@ const filteredAndSortedReviews = computed(() => {
 const fetchReviews = async () => {
   try {
     loading.value = true
+    
+    // Prioritize the context: if it's app reviews, ignore IDs. 
+    // If it's tailor reviews, ignore product IDs (prevents App.vue fallback collision).
     const res = await db.runAction('get_reviews', {
       isApp: props.isApp,
-      tailorId: props.tailorId,
-      productId: props.productId
+      tailorId: props.isApp ? null : props.tailorId,
+      productId: (props.isApp || props.tailorId) ? null : props.productId
     });
 
     reviews.value = res.rows.map(r => ({
       id: r.id,
-      author: `${r.first_name} ${r.last_name}`,
+      author: (r.first_name || r.last_name) ? `${r.first_name || ''} ${r.last_name || ''}`.trim() : r.username,
       rating: r.rating,
       text: r.text,
       time: formatDate(r.created_at),
@@ -86,8 +89,9 @@ const fetchReviews = async () => {
     }))
 
     if (props.tailorId && res.rows.length > 0) {
+      const r = res.rows[0];
       tailorInfo.value = {
-        name: `${res.rows[0].tailor_first} ${res.rows[0].tailor_last}`
+        name: (r.tailor_first || r.tailor_last) ? `${r.tailor_first || ''} ${r.tailor_last || ''}`.trim() : (r.tailor_username || 'Artisan')
       }
     }
   } catch (e) {

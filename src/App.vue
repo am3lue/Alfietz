@@ -363,7 +363,7 @@ const fetchInitialData = async (force = false) => {
 
     const newAppReviews = data.appReviews.map(r => ({
       id: r.id,
-      author: r.first_name,
+      author: (r.first_name || r.last_name) ? `${r.first_name || ''} ${r.last_name || ''}`.trim() : r.username,
       text: r.text,
       rating: r.rating,
       avatar: r.avatar
