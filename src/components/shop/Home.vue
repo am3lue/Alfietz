@@ -19,7 +19,7 @@ const props = defineProps({
 
 const searchQuery = ref('')
 
-const emit = defineEmits(['go-details', 'go-notifications', 'go-search', 'go-explore', 'go-categories', 'go-trending', 'go-tailor', 'toggle-like', 'search', 'navigate'])
+const emit = defineEmits(['go-details', 'go-notifications', 'go-search', 'go-explore', 'go-categories', 'go-trending', 'go-tailor', 'toggle-like', 'search', 'navigate', 'go-stories'])
 
 const handleSearch = () => {
   if (searchQuery.value.trim()) {

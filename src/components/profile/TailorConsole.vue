@@ -71,22 +71,12 @@ onMounted(async () => {
 
 const fetchData = async () => {
   try {
-    // 1. Fetch Orders
-    const ordersRes = await db.execute({
-      sql: `
-        SELECT o.*, u.first_name, u.last_name, u.whatsapp as customer_phone
-        FROM orders o 
-        JOIN users u ON o.customer_id = u.id 
-        WHERE o.tailor_id = ? 
-        ORDER BY o.created_at DESC
-      `,
-      args: [props.userData.id]
-    })
+    const data = await db.runAction('get_tailor_console_data', { userId: props.userData.id });
     
-    activeOrders.value = ordersRes.rows.map(o => ({
+    activeOrders.value = data.orders.map(o => ({
       id: o.id,
       item: o.item_name,
-      customer: `${o.first_name} ${o.last_name}`,
+      customer: `${o.first_name || ''} ${o.last_name || ''}`.trim(),
       customer_id: o.customer_id,
       customerFirstName: o.first_name,
       customerPhone: o.customer_phone,
@@ -99,23 +89,9 @@ const fetchData = async () => {
       image: o.image
     }))
 
-    // 2. Fetch Negotiations
-    const negsRes = await db.execute({
-      sql: `
-        SELECT n.*, u.first_name, u.last_name, u.whatsapp as customer_phone, MAX(p.image) as product_image
-        FROM negotiations n 
-        JOIN users u ON n.customer_id = u.id 
-        LEFT JOIN products p ON n.item_name = p.name AND p.owner_id = n.tailor_id
-        WHERE n.tailor_id = ? 
-        GROUP BY n.id
-        ORDER BY n.created_at DESC
-      `,
-      args: [props.userData.id]
-    })
-    
-    negotiations.value = negsRes.rows.map(n => ({
+    negotiations.value = data.negotiations.map(n => ({
       id: n.id,
-      customer: `${n.first_name} ${n.last_name}`,
+      customer: `${n.first_name || ''} ${n.last_name || ''}`.trim(),
       customer_id: n.customer_id,
       customerFirstName: n.first_name,
       customerPhone: n.customer_phone,
@@ -128,14 +104,9 @@ const fetchData = async () => {
       image: n.image || n.product_image || 'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?q=80&w=400'
     }))
 
-    // 3. Fetch My Products
-    const productsRes = await db.execute({
-      sql: `SELECT * FROM products WHERE owner_id = ? ORDER BY id DESC`,
-      args: [props.userData.id]
-    })
-    myProducts.value = productsRes.rows
+    myProducts.value = data.products
 
-    // 4. Calculate Stats
+    // Calculate Stats
     const now = new Date()
     const currentMonth = now.getMonth()
     const currentYear = now.getFullYear()
@@ -147,7 +118,7 @@ const fetchData = async () => {
     let lastMonthRev = 0
     let totalRevenue = 0
 
-    ordersRes.rows.forEach(o => {
+    data.orders.forEach(o => {
       if (o.status === 'Pending' || o.status === 'Cancelled') return
       
       const priceVal = parseInt(o.price.replace(/[^0-9]/g, '')) || 0
@@ -178,12 +149,7 @@ const fetchData = async () => {
     
     // Total Likes and Reviews for the empire
     stats.value.totalLikes = myProducts.value.reduce((sum, p) => sum + (p.likes_count || 0), 0)
-    
-    const reviewRes = await db.execute({
-      sql: "SELECT COUNT(*) as count FROM reviews WHERE product_id IN (SELECT id FROM products WHERE owner_id = ?)",
-      args: [props.userData.id]
-    })
-    stats.value.totalReviews = reviewRes.rows[0]?.count || 0
+    stats.value.totalReviews = data.reviewsCount || 0
     
     // Use real profile views from userData
     const views = props.userData.profileViews || 0

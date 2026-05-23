@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { db } from '../../db/client'
 import { useRoute } from 'vue-router'
 
@@ -18,24 +18,30 @@ const messages = ref([])
 const newMessage = ref('')
 const loading = ref(true)
 const messagesContainer = ref(null)
+let pollInterval = null
 
 const otherUserId = route.params.userId
 
 onMounted(async () => {
   await fetchUserDetails()
-  await fetchMessages()
-  scrollToBottom()
+  await fetchMessages(true)
   
+  // Simulation of Real-time: Poll every 5 seconds
+  pollInterval = setInterval(() => {
+    fetchMessages(false)
+  }, 5000)
+
   // Mark as read
   await markAsRead()
 })
 
+onUnmounted(() => {
+  if (pollInterval) clearInterval(pollInterval)
+})
+
 const fetchUserDetails = async () => {
   try {
-    const res = await db.execute({
-      sql: "SELECT * FROM users WHERE id = ?",
-      args: [otherUserId]
-    })
+    const res = await db.runAction('get_user_by_id', { userId: otherUserId });
     if (res.rows.length > 0) {
       otherUser.value = res.rows[0]
     }
@@ -44,22 +50,25 @@ const fetchUserDetails = async () => {
   }
 }
 
-const fetchMessages = async () => {
+const fetchMessages = async (showLoading = false) => {
   try {
-    loading.value = true
-    const res = await db.execute({
-      sql: `
-        SELECT * FROM messages 
-        WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
-        ORDER BY created_at ASC
-      `,
-      args: [props.userData.id, otherUserId, otherUserId, props.userData.id]
-    })
-    messages.value = res.rows
+    if (showLoading) loading.value = true
+    const res = await db.runAction('get_messages', { 
+      userId: props.userData.id, 
+      otherId: otherUserId 
+    });
+    
+    // Only update if count changed to avoid unnecessary re-renders
+    if (res.rows.length !== messages.value.length) {
+      messages.value = res.rows
+      if (!showLoading) {
+        await markAsRead() // Clear notifications if new messages arrived while in chat
+      }
+    }
   } catch (e) {
     console.error("Error fetching messages:", e)
   } finally {
-    loading.value = false
+    if (showLoading) loading.value = false
   }
 }
 
@@ -253,15 +262,17 @@ watch(messages, () => {
 .message-wrapper.received { justify-content: flex-start; }
 
 .message-bubble {
-  max-width: 75%;
-  padding: 12px 16px;
-  border-radius: 20px;
+  max-width: 80%;
+  padding: 12px 18px;
+  border-radius: 18px;
   position: relative;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 .sent .message-bubble {
-  background: var(--accent-amber);
+  background: linear-gradient(135deg, var(--accent-amber), #B45309);
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -273,41 +284,43 @@ watch(messages, () => {
   border: 1px solid var(--glass-border);
 }
 
-.message-content {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.4;
-}
-
 .message-time {
   font-size: 10px;
-  opacity: 0.7;
+  opacity: 0.6;
   display: block;
   text-align: right;
-  margin-top: 4px;
+  margin-top: 6px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .chat-input-area {
-  padding: 20px;
-  background: var(--wood-walnut);
+  padding: 16px 20px 32px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
   border-top: 1px solid var(--glass-border);
 }
 
 .input-wrapper {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
-  background: var(--wood-deep);
-  border: 1px solid var(--glass-border);
-  border-radius: 24px;
+  background: var(--wood-walnut);
+  border: 1.5px solid var(--glass-border);
+  border-radius: 30px;
   padding: 8px 16px;
+  transition: all 0.3s;
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 15px var(--accent-glow);
 }
 
 .input-wrapper textarea {
   flex: 1;
   background: transparent;
   border: none;
-  color: white;
+  color: var(--input-text);
   padding: 8px 0;
   font-size: 15px;
   outline: none;

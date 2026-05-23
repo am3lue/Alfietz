@@ -14,45 +14,33 @@ const props = defineProps({
   }
 })
 
-defineEmits(['go-back'])
+defineEmits(['go-back', 'go-chat'])
+
+const STORAGE_KEY = 'alfie_orders_cache'
 
 const orders = ref([])
-
-// Dialog State
-const dialog = ref({
-  show: false,
-  title: '',
-  message: '',
-  type: 'info'
-})
-
-const showDialog = (options) => {
-  dialog.value = {
-    show: true,
-    title: options.title || '',
-    message: options.message || '',
-    type: options.type || 'info'
-  }
-}
+const loading = ref(true)
 
 onMounted(async () => {
+  // 1. Instant Cache Load
+  const cached = localStorage.getItem(STORAGE_KEY)
+  if (cached) {
+    try {
+      orders.value = JSON.parse(cached)
+      loading.value = false // Skip loading state if we have a cache
+    } catch (e) {
+      console.warn("Failed to parse orders cache")
+    }
+  }
+
   await fetchOrders()
 })
 
 const fetchOrders = async () => {
   try {
-    const res = await db.execute({
-      sql: `
-        SELECT o.*, u.username as tailor_name, u.whatsapp as tailor_phone, u.first_name as tailor_first_name, u.id as tailor_id
-        FROM orders o 
-        JOIN users u ON o.tailor_id = u.id 
-        WHERE o.customer_id = ? 
-        ORDER BY o.created_at DESC
-      `,
-      args: [props.userData.id]
-    })
+    const res = await db.runAction('get_orders', { userId: props.userData.id })
     
-    orders.value = res.rows.map(o => ({
+    const newOrders = res.rows.map(o => ({
       id: o.id,
       item: o.item_name,
       tailor: o.tailor_name,
@@ -64,8 +52,16 @@ const fetchOrders = async () => {
       status: o.status,
       image: o.image
     }))
+
+    // 2. Smart Update (Only update and cache if data changed)
+    if (JSON.stringify(newOrders) !== JSON.stringify(orders.value)) {
+      orders.value = newOrders
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newOrders))
+    }
   } catch (e) {
     console.error("Error fetching orders:", e)
+  } finally {
+    loading.value = false
   }
 }
 

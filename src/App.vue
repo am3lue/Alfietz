@@ -120,16 +120,18 @@ const navigateTo = (screenName, extraState = {}) => {
   if (extraState.selectedSeller) {
     // Increment profile views optimistically
     try {
-      db.execute({
-        sql: "UPDATE users SET profile_views = profile_views + 1 WHERE id = ?",
-        args: [extraState.selectedSeller.id || extraState.selectedSeller.owner_id]
+      db.runAction('increment_views', { 
+        userId: extraState.selectedSeller.id || extraState.selectedSeller.owner_id 
       });
     } catch (e) {
       console.error('Failed to increment profile views:', e);
     }
 
     selectedSeller.value = extraState.selectedSeller
-    const username = extraState.selectedSeller.username;
+    let username = extraState.selectedSeller.username;
+    // Remove leading @ if present to avoid double @ in route
+    if (username.startsWith('@')) username = username.slice(1);
+
     console.log(`[NavigateTo] Going to tailor: @${username}`);
     router.push({ name: 'tailor-details', params: { username } })
     return
@@ -142,7 +144,11 @@ const navigateTo = (screenName, extraState = {}) => {
   }
 
   if (screenName) {
-    router.push({ name: screenName })
+    const params = {};
+    if (screenName === 'chat-detail' && extraState.userId) {
+      params.userId = extraState.userId;
+    }
+    router.push({ name: screenName, params })
   }
 }
 
@@ -154,11 +160,7 @@ const handleResetPassword = async (newPassword) => {
   isGlobalLoading.value = true
   loadingMessage.value = 'Forging new password...'
   try {
-    const hashedPassword = await bcrypt.hash(newPassword, 10)
-    await db.execute({
-      sql: "UPDATE users SET password = ? WHERE email = ?",
-      args: [hashedPassword, resetEmail.value]
-    })
+    await db.runAction('reset_password', { password: newPassword, email: resetEmail.value })
     showToast('Password reset successfully!', 'success')
     navigateTo('login')
   } catch (e) {
@@ -193,51 +195,37 @@ const handleLogin = async (data) => {
   isGlobalLoading.value = true;
   loadingMessage.value = 'Authenticating with the Tribe...';
   try {
-    const res = await db.runAction('login', { email: data.email });
-    console.log('[Auth] DB Response rows:', res.rows?.length);
+    const res = await db.runAction('login', { 
+      email: data.email, 
+      password: data.password 
+    });
 
-    if (res.rows.length > 0) {
-      const u = res.rows[0];
-      // Try bcrypt compare, fallback to plain text for legacy users (first migration)
-      let passMatch = false;
-      try {
-        passMatch = await bcrypt.compare(data.password, u.password);
-      } catch (e) {
-        passMatch = data.password === u.password;
-      }
-
-      if (passMatch) {
-        console.log('[Auth] Password match! Setting user data.');
-        const loggedUser = {
-          id: u.id,
-          username: u.username,
-          firstName: u.first_name,
-          lastName: u.last_name,
-          email: u.email,
-          whatsapp: u.whatsapp,
-          avatar: u.avatar,
-          userType: u.user_type,
-          needs: u.needs,
-          gives: u.gives,
-          profileViews: u.profile_views
-        };
-        userData.value = loggedUser;
-        setStored('user_data', loggedUser);
-        
-        await fetchInitialData();
-        showToast(`Welcome back, ${u.first_name}!`, 'success');
-        navigateTo('home');
-      } else {
-        console.warn('[Auth] Password mismatch');
-        showToast('Invalid password. Please try again.', 'error');
-      }
-    } else {
-      console.warn('[Auth] No user found with email:', data.email);
-      showToast('No account found with this email.', 'error');
+    if (res.user) {
+      console.log('[Auth] Login successful! Setting user data.');
+      const u = res.user;
+      const loggedUser = {
+        id: u.id,
+        username: u.username,
+        firstName: u.first_name,
+        lastName: u.last_name,
+        email: u.email,
+        whatsapp: u.whatsapp,
+        avatar: u.avatar,
+        userType: u.user_type,
+        needs: u.needs,
+        gives: u.gives,
+        profileViews: u.profile_views
+      };
+      userData.value = loggedUser;
+      setStored('user_data', loggedUser);
+      
+      await fetchInitialData();
+      showToast(`Welcome back, ${u.first_name}!`, 'success');
+      navigateTo('home');
     }
   } catch (e) {
     console.error('[Auth] Login error:', e);
-    showToast('Login failed. Ancestors are silent.', 'error');
+    showToast(e.message || 'Login failed. Ancestors are silent.', 'error');
   } finally {
     isGlobalLoading.value = false;
   }
@@ -249,41 +237,22 @@ const handleSignUp = async (data) => {
   loadingMessage.value = 'Joining the heritage...';
   
   try {
-    // 1. Check if user already exists
-    const checkRes = await db.execute({
-      sql: 'SELECT id FROM users WHERE email = ? OR username = ?',
-      args: [data.email, data.username]
-    });
-
-    if (checkRes.rows && checkRes.rows.length > 0) {
-      showToast('Email or username already registered.', 'error');
-      return;
-    }
-
-    // 2. Hash password
-    console.log('[Auth] Hashing password...');
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-    
-    // 3. Create user
+    // Create user
     const newId = 'u' + Date.now();
-    const signupData = { ...data, id: newId, password: hashedPassword };
+    const signupData = { ...data, id: newId };
     
-    console.log('[Auth] Executing DB insert via Action...');
     await db.runAction('signup', signupData);
     
-    console.log('[Auth] Signup successful');
-    
-    // 4. Update state (cleanly, without the password)
-    const { password, ...userWithoutPassword } = signupData;
-    userData.value = userWithoutPassword;
-    setStored('user_data', userWithoutPassword);
+    // Update state (server returns nothing or success, we use local data)
+    userData.value = signupData;
+    setStored('user_data', signupData);
     
     await fetchInitialData();
     showToast('Welcome to the heritage tribe!', 'success');
     navigateTo('home');
   } catch (e) {
     console.error('[Auth] Signup error:', e);
-    showToast('Signup failed. Please try again.', 'error');
+    showToast(e.message || 'Signup failed. Please try again.', 'error');
   } finally {
     isGlobalLoading.value = false;
   }
@@ -314,115 +283,100 @@ const handleUpdateRole = async (newRole) => {
   }
 }
 
-const fetchInitialData = async () => {
+const isSyncing = ref(false)
+
+const fetchInitialData = async (force = false) => {
+  // Prevent duplicate concurrent syncs unless forced
+  if (isSyncing.value && !force) return;
+  
   try {
-    // Fetch user rating if logged in
-    let userRating = 0;
-    if (userData.value.id !== 'guest') {
-      const ratingRes = await db.execute({
-        sql: `
-          SELECT AVG(r.rating) as avg_rating 
-          FROM reviews r 
-          WHERE r.product_id IN (SELECT id FROM products WHERE owner_id = ?)
-        `,
-        args: [userData.value.id]
-      });
-      userRating = ratingRes.rows[0]?.avg_rating || 0;
+    isSyncing.value = true;
+    
+    // 1. Instant Cache Load (Already handled by refs initialization, but we ensure state is solid)
+    const cachedCategories = getStored('categories_cache', []);
+    if (cachedCategories.length > 0 && !force) {
+      // If we have cache and it's not a forced refresh, we don't show the global spinner
+      // This makes the app feel "instant"
+    } else {
+      isGlobalLoading.value = true;
     }
 
-    const [catsRes, trendingRes, productsRes, appRevRes, suppliersRes] = await Promise.all([
-      db.execute("SELECT * FROM categories"),
-      db.execute(`
-        SELECT p.*, c.name as categoryName 
-        FROM products p 
-        LEFT JOIN categories c ON p.category_id = c.id 
-        ORDER BY p.likes_count DESC LIMIT 4
-      `),
-      db.execute(`
-        SELECT p.*, c.name as categoryName 
-        FROM products p 
-        LEFT JOIN categories c ON p.category_id = c.id 
-        ORDER BY p.id DESC
-      `),
-      db.execute(`
-        SELECT r.*, u.first_name, u.last_name, u.avatar 
-        FROM app_reviews r 
-        JOIN users u ON r.user_id = u.id 
-        ORDER BY r.created_at DESC LIMIT 5
-      `),
-      db.execute(`
-        SELECT u.*, 
-               (SELECT AVG(rating) FROM reviews WHERE product_id IN (SELECT id FROM products WHERE owner_id = u.id)) as avg_rating,
-               (SELECT SUM(likes_count) FROM products WHERE owner_id = u.id) as total_likes
-        FROM users u 
-        WHERE u.user_type = 'supplier' 
-        ORDER BY profile_views DESC LIMIT 8
-      `)
-    ]);
+    // 2. Background Sync
+    const data = await db.runAction('get_initial_data', { userId: userData.value.id });
     
-    categories.value = catsRes.rows;
-    trendingProducts.value = trendingRes.rows;
-    allProducts.value = productsRes.rows;
+    // 3. Smart Update (Only update refs if data actually changed)
+    const favoriteIds = data.favorites || [];
     
-    trendingSellers.value = suppliersRes.rows.map(s => ({
+    const newAllProducts = data.allProducts.map(p => ({
+      ...p,
+      liked: favoriteIds.includes(p.id)
+    }));
+
+    // Deep compare allProducts to avoid unnecessary re-renders
+    if (JSON.stringify(newAllProducts) !== JSON.stringify(allProducts.value)) {
+      allProducts.value = newAllProducts;
+      setStored('all_products_cache', allProducts.value);
+    }
+    
+    const newTrendingProducts = data.trendingProducts.map(p => ({
+      ...p,
+      liked: favoriteIds.includes(p.id)
+    }));
+    if (JSON.stringify(newTrendingProducts) !== JSON.stringify(trendingProducts.value)) {
+      trendingProducts.value = newTrendingProducts;
+      setStored('trending_products_cache', trendingProducts.value);
+    }
+    
+    const newFavoriteItems = allProducts.value.filter(p => p.liked);
+    if (JSON.stringify(newFavoriteItems) !== JSON.stringify(favoriteItems.value)) {
+      favoriteItems.value = newFavoriteItems;
+      setStored('favorites', favoriteItems.value);
+    }
+
+    if (JSON.stringify(data.categories) !== JSON.stringify(categories.value)) {
+      categories.value = data.categories;
+      setStored('categories_cache', categories.value);
+    }
+    
+    const newTrendingSellers = data.trendingSellers.map(s => ({
       id: s.id,
       name: `${s.first_name} ${s.last_name}`,
       username: s.username,
       avatar: s.avatar,
-      rating: s.avg_rating ? s.avg_rating.toFixed(1) : '0.0',
+      rating: s.avg_rating ? parseFloat(s.avg_rating).toFixed(1) : '0.0',
       likesCount: s.total_likes || 0,
       isVerified: true
     }));
-
-    if (userData.value.id !== 'guest') {
-      const myRating = suppliersRes.rows.find(s => s.id === userData.value.id)?.avg_rating;
-      userData.value.rating = myRating ? myRating.toFixed(1) : '0.0';
-    }
-    
-    // Update product count for the current user
-    if (userData.value.id !== 'guest') {
-      userProductCount.value = allProducts.value.filter(p => p.owner_id === userData.value.id).length;
+    if (JSON.stringify(newTrendingSellers) !== JSON.stringify(trendingSellers.value)) {
+      trendingSellers.value = newTrendingSellers;
+      setStored('trending_sellers_cache', trendingSellers.value);
     }
 
-    setStored('categories_cache', categories.value);
-    setStored('trending_products_cache', trendingProducts.value);
-    setStored('all_products_cache', allProducts.value);
-    setStored('trending_sellers_cache', trendingSellers.value);
+    if (userData.value.id !== 'guest') {
+      const myUser = data.trendingSellers.find(s => s.id === userData.value.id);
+      if (myUser) {
+        userData.value.rating = myUser.avg_rating ? parseFloat(myUser.avg_rating).toFixed(1) : '0.0';
+      }
+      userNotifications.value = data.notifications;
+      userProductCount.value = data.productCount;
+    }
 
-    appReviews.value = appRevRes.rows.map(r => ({
+    const newAppReviews = data.appReviews.map(r => ({
       id: r.id,
-      author: r.first_name, // Just first name as requested
+      author: r.first_name,
       text: r.text,
       rating: r.rating,
       avatar: r.avatar
     }));
-
-    // Fetch favorites if logged in
-    if (userData.value.id !== 'guest') {
-      const favIdsRes = await db.execute({
-        sql: "SELECT product_id FROM favorites WHERE user_id = ?",
-        args: [userData.value.id]
-      });
-      const favIds = favIdsRes.rows.map(r => r.product_id);
-      
-      allProducts.value = allProducts.value.map(p => ({
-        ...p,
-        liked: favIds.includes(p.id)
-      }));
-      
-      favoriteItems.value = allProducts.value.filter(p => p.liked);
-      setStored('favorites', favoriteItems.value);
-
-      // Fetch personal stats
-      const [notifRes, countRes] = await Promise.all([
-        db.execute({ sql: "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC", args: [userData.value.id] }),
-        db.execute({ sql: "SELECT COUNT(*) as total FROM products WHERE owner_id = ?", args: [userData.value.id] })
-      ]);
-      userNotifications.value = notifRes.rows;
-      userProductCount.value = countRes.rows[0]?.total || 0;
+    if (JSON.stringify(newAppReviews) !== JSON.stringify(appReviews.value)) {
+      appReviews.value = newAppReviews;
     }
+
   } catch (e) {
-    console.error('[InitialData] Fetch failed:', e);
+    console.error('[InitialData] Sync failed:', e);
+  } finally {
+    isGlobalLoading.value = false;
+    isSyncing.value = false;
   }
 }
 
@@ -432,33 +386,36 @@ const toggleLike = async (product) => {
     return
   }
   
+  const originalStatus = product.liked
   product.liked = !product.liked
   
-  // Sync all references
+  // Sync all references locally
   const updateProduct = (list) => {
     const p = list.find(item => item.id === product.id)
     if (p) p.liked = product.liked
   }
   updateProduct(allProducts.value)
-  
-  if (product.liked) {
-    // updatePreference(product.category_id, 2) // Recommendation engine (future)
-  }
 
   try {
+    await db.runAction('toggle_like', { 
+      userId: userData.value.id, 
+      productId: product.id, 
+      isAdding: product.liked 
+    });
+    
     if (product.liked) {
       if (!favoriteItems.value.find(item => item.id === product.id)) {
         favoriteItems.value.push({ ...product })
-        await db.runAction('toggle_favorite', { userId: userData.value.id, productId: product.id, isAdding: true });
-        await db.runAction('increment_likes', { productId: product.id });
       }
     } else {
       favoriteItems.value = favoriteItems.value.filter(item => item.id !== product.id)
-      await db.runAction('toggle_favorite', { userId: userData.value.id, productId: product.id, isAdding: false });
-      await db.runAction('decrement_likes', { productId: product.id });
     }
+    setStored('favorites', favoriteItems.value);
   } catch (e) {
     console.error("Toggle like error:", e)
+    // Rollback on error
+    product.liked = originalStatus
+    updateProduct(allProducts.value)
   }
 }
 
@@ -503,9 +460,15 @@ const handleNewOrder = async (data) => {
 
 const handleNewNegotiation = async (data) => {
   try {
-    await db.execute({
-      sql: "INSERT INTO negotiations (item_name, customer_id, tailor_id, proposed_price, status, size, color, notes, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      args: [data.itemName, userData.value.id, data.tailorId, data.price, 'Awaiting Reply', data.size, data.color, data.notes, data.image]
+    await db.runAction('create_negotiation', {
+      itemName: data.itemName || 'Unknown Item',
+      customerId: userData.value.id,
+      tailorId: data.tailorId,
+      price: data.offer || data.price || '0',
+      size: data.size || 'N/A',
+      color: data.color || 'N/A',
+      notes: data.notes || '',
+      image: data.image || ''
     })
     showToast('Negotiation initiated successfully!', 'success')
     await createNotification(data.tailorId, `New negotiation offer for "${data.itemName}"! 💰`)
@@ -584,10 +547,7 @@ const handleFeedbackSubmit = async (message) => {
   isGlobalLoading.value = true
   loadingMessage.value = 'Sending feedback...'
   try {
-    await db.execute({
-      sql: "INSERT INTO feedback (user_id, message) VALUES (?, ?)",
-      args: [userData.value.id, message]
-    })
+    await db.runAction('submit_feedback', { userId: userData.value.id, message })
     showToast('Feedback sent! Thank you.', 'success')
     navigateTo('home')
   } catch (e) {
@@ -638,31 +598,10 @@ const handleSearch = async (query) => {
   isGlobalLoading.value = true;
   loadingMessage.value = 'Searching the heritage...';
   try {
-    const q = `%${query.toLowerCase()}%`;
-    const res = await db.execute({
-      sql: `
-        SELECT p.*, u.username as owner_username, c.name as category_name
-        FROM products p
-        LEFT JOIN categories c ON p.category_id = c.id
-        LEFT JOIN users u ON p.owner_id = u.id
-        WHERE p.name LIKE ?
-           OR p.description LIKE ?
-           OR c.name LIKE ?
-           OR u.username LIKE ?
-        ORDER BY p.likes_count DESC
-      `,
-      args: [q, q, q, q]
-    });
+    const res = await db.runAction('search', { query, userId: userData.value.id });
 
-    // Fetch favorites
-    let favoriteIds = [];
-    if (userData.value.id !== 'guest') {
-      const favRes = await db.execute({
-        sql: "SELECT product_id FROM favorites WHERE user_id = ?",
-        args: [userData.value.id]
-      });
-      favoriteIds = favRes.rows.map(f => f.product_id);
-    }
+    // Fetch favorites state
+    const favoriteIds = favoriteItems.value.map(f => f.id);
 
     searchResults.value = res.rows.map(p => ({
       ...p,

@@ -14,6 +14,10 @@ const props = defineProps({
   userData: {
     type: Object,
     required: true
+  },
+  favoriteItems: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -69,20 +73,9 @@ const loadTailorData = async () => {
 
   try {
     loading.value = true
-    // 0. Fetch seller info by username
-    const sellerRes = await db.execute({
-      sql: "SELECT * FROM users WHERE username = ?",
-      args: [username]
-    })
+    const data = await db.runAction('get_tailor_details', { username });
     
-    if (sellerRes.rows.length === 0) {
-      console.error("Artisan not found")
-      return
-    }
-
-    const s = sellerRes.rows[0]
-    const tailorId = s.id
-    
+    const s = data.tailor;
     sellerData.value = {
       ...sellerData.value,
       id: s.id,
@@ -95,45 +88,17 @@ const loadTailorData = async () => {
       isVerified: true 
     }
 
-    // 1. Fetch actual products for this tailor
-    const res = await db.execute({
-      sql: `
-        SELECT p.*, c.name as categoryName 
-        FROM products p 
-        LEFT JOIN categories c ON p.category_id = c.id
-        WHERE p.owner_id = ? 
-        ORDER BY p.id DESC
-      `,
-      args: [tailorId]
-    })
-    products.value = res.rows
+    products.value = data.products.map(p => ({
+      ...p,
+      liked: props.favoriteItems.some(fav => fav.id === p.id)
+    }))
     
-    // 2. Fetch Real Stats (Likes & Clients)
-    const statsRes = await db.execute({
-      sql: `
-        SELECT 
-          (SELECT SUM(likes_count) FROM products WHERE owner_id = ?) as total_likes,
-          (SELECT COUNT(*) FROM orders WHERE tailor_id = ?) as total_clients
-      `,
-      args: [tailorId, tailorId]
-    })
-    if (statsRes.rows.length > 0) {
-      tailorStats.value.likes = statsRes.rows[0].total_likes || 0
-      tailorStats.value.clients = statsRes.rows[0].total_clients || 0
+    if (data.stats) {
+      tailorStats.value.likes = data.stats.total_likes || 0
+      tailorStats.value.clients = data.stats.total_clients || 0
     }
 
-    // 3. Fetch Reviews
-    const revRes = await db.execute({
-      sql: `
-        SELECT r.*, u.username as author_name, u.avatar as author_avatar 
-        FROM reviews r 
-        JOIN users u ON r.user_id = u.id 
-        WHERE r.product_id IN (SELECT id FROM products WHERE owner_id = ?)
-        LIMIT 3
-      `,
-      args: [tailorId]
-    })
-    reviews.value = revRes.rows
+    reviews.value = data.reviews
   } catch (e) {
     console.error("Error fetching tailor details:", e)
   } finally {
@@ -151,7 +116,13 @@ const connectToWhatsApp = () => {
   const buyerName = props.userData.firstName || props.userData.username
   const tailorName = sellerData.value.name || sellerData.value.username
 
-  const message = `Habari ${tailorName}! ✂️\n\nMy name is ${buyerName}, and I've been admiring your incredible work on Alfietz! 🌟\n\nI'm very interested in commissioning a custom piece from you and would love to discuss how we can bring a new heritage vision to life. 🧵✨\n\nLooking forward to hearing from you!\n\nBest regards,\n${buyerName} ✍️`;
+  const scissors = "✂️"
+  const star = "🌟"
+  const needle = "🧵"
+  const sparkles = "✨"
+  const pen = "✍️"
+
+  const message = `Habari ${tailorName}! ${scissors}\n\nMy name is ${buyerName}, and I've been admiring your incredible work on Alfietz! ${star}\n\nI'm very interested in commissioning a custom piece from you and would love to discuss how we can bring a new heritage vision to life. ${needle}${sparkles}\n\nLooking forward to hearing from you!\n\nBest regards,\n${buyerName} ${pen}`;
   
   const url = `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank');

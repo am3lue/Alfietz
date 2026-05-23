@@ -11,65 +11,45 @@ const props = defineProps({
 
 const emit = defineEmits(['go-back', 'go-chat'])
 
+const STORAGE_KEY = 'alfie_chats_cache'
+
 const conversations = ref([])
 const loading = ref(true)
 
 onMounted(async () => {
+  // 1. Instant Cache Load
+  const cached = localStorage.getItem(STORAGE_KEY)
+  if (cached) {
+    try {
+      conversations.value = JSON.parse(cached)
+      loading.value = false // Skip loading state if we have a cache
+    } catch (e) {
+      console.warn("Failed to parse chat cache")
+    }
+  }
+  
+  // 2. Background Refresh
   await fetchConversations()
 })
 
 const fetchConversations = async () => {
   try {
-    loading.value = true
-    // Fetch unique users the current user has exchanged messages with
-    const res = await db.execute({
-      sql: `
-        SELECT DISTINCT 
-          CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END as other_user_id
-        FROM messages 
-        WHERE sender_id = ? OR receiver_id = ?
-      `,
-      args: [props.userData.id, props.userData.id, props.userData.id]
-    })
-
-    const otherUserIds = res.rows.map(r => r.other_user_id)
+    const res = await db.runAction('get_chats', { userId: props.userData.id })
     
-    if (otherUserIds.length === 0) {
-      conversations.value = []
-      return
-    }
+    const newConversations = res.rows.map(r => ({
+      id: r.id,
+      name: `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.username,
+      avatar: r.avatar,
+      lastMessage: r.last_message || 'No messages yet',
+      time: r.last_message_time ? new Date(r.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      unread: r.unread_count > 0
+    }))
 
-    // Fetch user details and last message for each conversation
-    const convos = []
-    for (const id of otherUserIds) {
-      const userRes = await db.execute({
-        sql: "SELECT * FROM users WHERE id = ?",
-        args: [id]
-      })
-      
-      const lastMsgRes = await db.execute({
-        sql: `
-          SELECT * FROM messages 
-          WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
-          ORDER BY created_at DESC LIMIT 1
-        `,
-        args: [props.userData.id, id, id, props.userData.id]
-      })
-
-      if (userRes.rows.length > 0) {
-        const user = userRes.rows[0]
-        convos.push({
-          id: user.id,
-          name: `${user.first_name} ${user.last_name}` || user.username,
-          avatar: user.avatar,
-          lastMessage: lastMsgRes.rows[0]?.content || 'No messages yet',
-          time: lastMsgRes.rows[0] ? new Date(lastMsgRes.rows[0].created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-          unread: lastMsgRes.rows[0]?.receiver_id === props.userData.id && !lastMsgRes.rows[0]?.is_read
-        })
-      }
+    // 3. Smart Update (Only update and cache if data changed)
+    if (JSON.stringify(newConversations) !== JSON.stringify(conversations.value)) {
+      conversations.value = newConversations
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newConversations))
     }
-    
-    conversations.value = convos
   } catch (e) {
     console.error("Error fetching conversations:", e)
   } finally {
@@ -81,15 +61,18 @@ const fetchConversations = async () => {
 <template>
   <div class="chat-list-page animate-fade">
     <div class="header-row">
-      <button class="back-btn" @click="$emit('go-back')">
+      <button class="back-btn tap-active" @click="$emit('go-back')">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
       </button>
-      <h1 class="title">My Conversations</h1>
+      <div class="header-text">
+        <h1 class="title">Tribe Conversations</h1>
+        <p class="subtitle">Whispers of the heritage</p>
+      </div>
     </div>
 
     <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Gathering the Tribe's whispers...</p>
+      <div class="heritage-spinner"></div>
+      <p class="loading-msg">Summoning your whispers...</p>
     </div>
 
     <div v-else-if="conversations.length === 0" class="empty-state">
@@ -136,20 +119,45 @@ const fetchConversations = async () => {
   margin-bottom: 40px;
 }
 
+.header-text {
+  display: flex;
+  flex-direction: column;
+}
+
 .title {
   font-size: 24px;
   font-weight: 800;
   color: var(--text-primary);
   margin: 0;
+  letter-spacing: -0.5px;
 }
 
-.loading-state, .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 100px 20px;
-  text-align: center;
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-amber);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 2px 0 0 0;
+}
+
+.heritage-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(217, 119, 6, 0.1);
+  border-top-color: var(--accent-amber);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-msg {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
   color: var(--text-muted);
 }
 

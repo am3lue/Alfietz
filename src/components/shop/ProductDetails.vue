@@ -22,10 +22,14 @@ const props = defineProps({
   userData: {
     type: Object,
     required: true
+  },
+  favoriteItems: {
+    type: Array,
+    default: () => []
   }
 })
 
-const emit = defineEmits(['go-back', 'go-reviews', 'go-feedback', 'toggle-favorite', 'delete', 'go-edit', 'order', 'negotiate'])
+const emit = defineEmits(['go-back', 'go-reviews', 'go-feedback', 'toggle-favorite', 'delete', 'go-edit', 'order', 'negotiate', 'go-login', 'go-tailor'])
 
 const route = useRoute()
 
@@ -124,32 +128,19 @@ const loadProductData = async (activeId) => {
       return
     }
 
-    // Fetch full product + seller info
-    const prodRes = await db.execute({
-      sql: `
-        SELECT 
-          p.*, 
-          u.whatsapp as sellerPhone,
-          u.username as sellerName,
-          u.first_name as sellerFirstName,
-          c.name as categoryName
-        FROM products p 
-        LEFT JOIN users u ON p.owner_id = u.id
-        LEFT JOIN categories c ON p.category_id = c.id 
-        WHERE p.id = ?
-      `,
-      args: [activeId]
-    })
+    // Fetch full product + seller info + reviews
+    const res = await db.runAction('get_product_details', { productId: activeId });
     
-    if (prodRes.rows.length === 0) {
+    if (!res.product) {
       error.value = 'Product not found'
       return
     }
     
+    const isLiked = props.favoriteItems.some(fav => fav.id === res.product.id)
     product.value = {
-      ...prodRes.rows[0],
-      liked: false, 
-      isFavorite: false
+      ...res.product,
+      liked: isLiked, 
+      isFavorite: isLiked
     }
     
     // Parse variants
@@ -202,20 +193,10 @@ const loadProductData = async (activeId) => {
       selectedColorId.value = parsedColors.value[0].id
     }
 
-    // Fetch reviews
-    const revRes = await db.execute({
-      sql: `
-        SELECT r.*, u.first_name, u.last_name, u.avatar 
-        FROM reviews r 
-        JOIN users u ON r.user_id = u.id 
-        WHERE r.product_id = ?
-        ORDER BY r.created_at DESC
-      `,
-      args: [activeId]
-    })
-    reviews.value = revRes.rows.map(r => ({
+    // Set reviews
+    reviews.value = res.reviews.map(r => ({
       id: r.id,
-      author: `${r.first_name} ${r.last_name}`,
+      author: r.first_name, // Just first name as requested
       rating: r.rating,
       text: r.text,
       time: 'Recently',
@@ -223,11 +204,14 @@ const loadProductData = async (activeId) => {
     }))
 
     // Fetch similar products
-    const similarRes = await db.execute({
-      sql: "SELECT * FROM products WHERE category_id = ? AND id != ? LIMIT 4",
-      args: [product.value.category_id, activeId]
-    })
-    similarProducts.value = similarRes.rows
+    const similarRes = await db.runAction('get_similar_products', { 
+      categoryId: product.value.category_id, 
+      productId: activeId 
+    });
+    similarProducts.value = similarRes.rows.map(p => ({
+      ...p,
+      liked: props.favoriteItems.some(fav => fav.id === p.id)
+    }))
     
   } catch (e) {
     console.error('Fetch error:', e)
@@ -296,28 +280,36 @@ const connectToWhatsApp = (withOffer = false) => {
   let normalized = phoneNumber.startsWith('0') ? '255' + phoneNumber.slice(1) : phoneNumber.replace('+', '')
   
   const buyerName = props.userData.firstName || props.userData.username
-  const sellerName = product.value.sellerFirstName || product.value.sellerName
+  const sellerName = product.value.first_name || product.value.owner_username
 
-  let message = `Habari ${sellerName}! ✨\n\n`
-  message += `My name is ${buyerName}, and I'm absolutely in love with your piece *"${product.value.name}"* on Alfietz! 😍\n\n`
+  const sparkles = "✨"
+  const heartEye = "😍"
+  const diamond = "🔹"
+  const memo = "📝"
+  const bag = "💰"
+  const truck = "🚚"
+  const pen = "✍️"
+
+  let message = `Habari ${sellerName}! ${sparkles}\n\n`
+  message += `My name is ${buyerName}, and I'm absolutely in love with your piece *"${product.value.name}"* on Alfietz! ${heartEye}\n\n`
   message += `I'd like to place an order with these details:\n`
-  message += `🔹 *Product:* ${product.value.name}\n`
-  message += `🔹 *Price:* ${product.value.price}\n`
-  message += `🔹 *Size:* ${selectedSize.value}\n`
-  message += `🔹 *Color:* ${variant.name}\n`
+  message += `${diamond} *Product:* ${product.value.name}\n`
+  message += `${diamond} *Price:* ${product.value.price}\n`
+  message += `${diamond} *Size:* ${selectedSize.value}\n`
+  message += `${diamond} *Color:* ${variant.name}\n`
 
   if (specialInstructions.value.trim()) {
-    message += `\n📝 *Special Requirements:* ${specialInstructions.value.trim()}\n`
+    message += `\n${memo} *Special Requirements:* ${specialInstructions.value.trim()}\n`
   }
   
   if (withOffer && offerAmount.value) {
-    message += `\n💰 *My Offer:* TSh ${offerAmount.value}\n`
+    message += `\n${bag} *My Offer:* TSh ${offerAmount.value}\n`
     message += `Would you be open to this offer? I'd love to make this heritage piece mine!\n`
   } else {
-    message += `\nCould you please let me know how we can proceed with the payment and delivery? 🚚\n`
+    message += `\nCould you please let me know how we can proceed with the payment and delivery? ${truck}\n`
   }
 
-  message += `\nBest regards,\n${buyerName} ✍️`
+  message += `\nBest regards,\n${buyerName} ${pen}`
 
   // Save to database
   if (withOffer) {
@@ -491,11 +483,11 @@ const shareProduct = async () => {
         </div>
 
         <!-- Artisan Section -->
-        <div class="artisan-section-mini" @click="$emit('go-tailor', { id: product.owner_id, username: product.sellerName, first_name: product.sellerFirstName, avatar: product.avatar })">
-          <img :src="product.avatar" class="artisan-avatar-mini" />
+        <div class="artisan-section-mini" @click="$emit('go-tailor', { id: product.owner_id, username: product.owner_username, first_name: product.first_name, avatar: product.owner_avatar })">
+          <img :src="product.owner_avatar" class="artisan-avatar-mini" />
           <div class="artisan-info-mini">
             <span class="artisan-label">Sold by</span>
-            <span class="artisan-name">{{ product.sellerFirstName || product.sellerName }}</span>
+            <span class="artisan-name">{{ product.first_name || product.owner_username }}</span>
           </div>
           <button class="view-artisan-btn">
             View Profile

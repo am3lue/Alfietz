@@ -65,43 +65,12 @@ const filteredAndSortedReviews = computed(() => {
 const fetchReviews = async () => {
   try {
     loading.value = true
-    let sql = ''
-    let args = []
+    const res = await db.runAction('get_reviews', {
+      isApp: props.isApp,
+      tailorId: props.tailorId,
+      productId: props.productId
+    });
 
-    if (props.isApp) {
-      // Fetch reviews for the App itself
-      sql = `
-        SELECT r.*, u.first_name, u.last_name, u.avatar 
-        FROM app_reviews r 
-        JOIN users u ON r.user_id = u.id 
-        ORDER BY r.created_at DESC
-      `
-    } else if (props.tailorId) {
-      // Fetch reviews for all products of this tailor
-      sql = `
-        SELECT r.*, u.first_name, u.last_name, u.avatar, p.name as product_name, p.id as product_id, p.image as product_image,
-               t.first_name as tailor_first, t.last_name as tailor_last
-        FROM reviews r 
-        JOIN users u ON r.user_id = u.id 
-        JOIN products p ON r.product_id = p.id
-        JOIN users t ON p.owner_id = t.id
-        WHERE p.owner_id = ?
-        ORDER BY r.created_at DESC
-      `
-      args = [props.tailorId]
-    } else {
-      // Fetch reviews for a specific product
-      sql = `
-        SELECT r.*, u.first_name, u.last_name, u.avatar 
-        FROM reviews r 
-        JOIN users u ON r.user_id = u.id 
-        WHERE r.product_id = ?
-        ORDER BY r.created_at DESC
-      `
-      args = [props.productId]
-    }
-
-    const res = await db.execute({ sql, args })
     reviews.value = res.rows.map(r => ({
       id: r.id,
       author: `${r.first_name} ${r.last_name}`,
