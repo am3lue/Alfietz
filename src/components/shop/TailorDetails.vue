@@ -1,22 +1,30 @@
 <!-------- (TailorDetails.vue) ./src/components/shop/TailorDetails.vue ------------>
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import SectionHeader from '../layout/SectionHeader.vue'
 import { db } from '../../db/client'
+import { useRoute } from 'vue-router'
 
 const props = defineProps({
   seller: {
     type: Object,
-    required: true
+    required: false,
+    default: () => ({})
   },
   userData: {
     type: Object,
     required: true
+  },
+  favoriteItems: {
+    type: Array,
+    default: () => []
   }
 })
 
 const emit = defineEmits(['go-back', 'go-reviews', 'go-feedback', 'go-details'])
+const route = useRoute()
 
+const loading = ref(true)
 const hasConnected = ref(false)
 const products = ref([])
 const reviews = ref([])
@@ -59,69 +67,50 @@ const highlights = computed(() => {
   }
 })
 
-onMounted(async () => {
-  const tailorId = props.seller.owner_id || props.seller.id
+const loadTailorData = async () => {
+  const username = route.params.username
+  if (!username) return
+
   try {
-    // 0. Re-fetch seller info to ensure we have latest (whatsapp, gives, etc)
-    const sellerRes = await db.execute({
-      sql: "SELECT * FROM users WHERE id = ?",
-      args: [tailorId]
-    })
-    if (sellerRes.rows.length > 0) {
-      const s = sellerRes.rows[0]
-      sellerData.value = {
-        ...sellerData.value,
-        name: `${s.first_name} ${s.last_name}`,
-        username: s.username,
-        avatar: s.avatar,
-        bio: s.gives,
-        whatsapp: s.whatsapp
-      }
-    }
-
-    // 1. Fetch actual products for this tailor
-    const res = await db.execute({
-      sql: `
-        SELECT p.*, c.name as categoryName 
-        FROM products p 
-        LEFT JOIN categories c ON p.category_id = c.id
-        WHERE p.owner_id = ? 
-        ORDER BY p.id DESC
-      `,
-      args: [tailorId]
-    })
-    products.value = res.rows
+    loading.value = true
+    const data = await db.runAction('get_tailor_details', { username });
     
-    // 2. Fetch Real Stats (Likes & Clients)
-    const statsRes = await db.execute({
-      sql: `
-        SELECT 
-          (SELECT SUM(likes_count) FROM products WHERE owner_id = ?) as total_likes,
-          (SELECT COUNT(*) FROM orders WHERE tailor_id = ?) as total_clients
-      `,
-      args: [tailorId, tailorId]
-    })
-    if (statsRes.rows.length > 0) {
-      tailorStats.value.likes = statsRes.rows[0].total_likes || 0
-      tailorStats.value.clients = statsRes.rows[0].total_clients || 0
+    const s = data.tailor;
+    sellerData.value = {
+      ...sellerData.value,
+      id: s.id,
+      owner_id: s.id,
+      name: (s.first_name || s.last_name) ? `${s.first_name || ''} ${s.last_name || ''}`.trim() : s.username,
+      username: s.username,
+      avatar: s.avatar,
+      bio: s.gives,
+      whatsapp: s.whatsapp,
+      isVerified: true 
     }
 
-    // 3. Fetch Reviews
-    const revRes = await db.execute({
-      sql: `
-        SELECT r.*, u.username as author_name, u.avatar as author_avatar 
-        FROM reviews r 
-        JOIN users u ON r.user_id = u.id 
-        WHERE r.product_id IN (SELECT id FROM products WHERE owner_id = ?)
-        LIMIT 3
-      `,
-      args: [tailorId]
-    })
-    reviews.value = revRes.rows
+    products.value = data.products.map(p => ({
+      ...p,
+      liked: props.favoriteItems.some(fav => fav.id === p.id)
+    }))
+    
+    if (data.stats) {
+      tailorStats.value.likes = data.stats.total_likes || 0
+      tailorStats.value.clients = data.stats.total_clients || 0
+    }
+
+    reviews.value = data.reviews.map(r => ({
+      ...r,
+      author_name: (r.first_name || r.last_name) ? `${r.first_name || ''} ${r.last_name || ''}`.trim() : r.username
+    }))
   } catch (e) {
     console.error("Error fetching tailor details:", e)
+  } finally {
+    loading.value = false
   }
-})
+}
+
+onMounted(loadTailorData)
+watch(() => route.params.username, loadTailorData)
 
 const connectToWhatsApp = () => {
   let phoneNumber = sellerData.value.whatsapp || "255700000000";
@@ -130,7 +119,13 @@ const connectToWhatsApp = () => {
   const buyerName = props.userData.firstName || props.userData.username
   const tailorName = sellerData.value.name || sellerData.value.username
 
-  const message = `Habari ${tailorName}! ✂️\n\nMy name is ${buyerName}, and I've been admiring your incredible work on Alfietz! 🌟\n\nI'm very interested in commissioning a custom piece from you and would love to discuss how we can bring a new heritage vision to life. 🧵✨\n\nLooking forward to hearing from you!\n\nBest regards,\n${buyerName} ✍️`;
+  const scissors = "✂️"
+  const star = "🌟"
+  const needle = "🧵"
+  const sparkles = "✨"
+  const pen = "✍️"
+
+  const message = `Habari ${tailorName}! ${scissors}\n\nMy name is ${buyerName}, and I've been admiring your incredible work on Alfietz! ${star}\n\nI'm very interested in commissioning a custom piece from you and would love to discuss how we can bring a new heritage vision to life. ${needle}${sparkles}\n\nLooking forward to hearing from you!\n\nBest regards,\n${buyerName} ${pen}`;
   
   const url = `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank');
@@ -144,7 +139,68 @@ const makeCall = () => {
 </script>
 
 <template>
-  <div v-if="sellerData" class="tailor-page pattern-heritage animate-fade">
+  <div v-if="loading" class="tailor-page skeleton-mode">
+    <!-- Floating Heritage Status -->
+    <div class="heritage-status-overlay">
+      <div class="status-badge">
+        <div class="status-icon-pulse">✨</div>
+        <span class="status-text">Summoning Artisan Heritage...</span>
+      </div>
+    </div>
+
+    <div class="top-nav-glass skeleton-nav">
+      <div class="skeleton-back-btn"></div>
+      <div class="skeleton-text-short"></div>
+      <div class="skeleton-icon"></div>
+    </div>
+
+    <header class="ig-hero">
+      <div class="hero-main">
+        <div class="skeleton-avatar"></div>
+        <div class="hero-stats">
+          <div v-for="i in 3" :key="i" class="skeleton-stat-box">
+            <div class="skeleton-num"></div>
+            <div class="skeleton-label"></div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-bio">
+        <div class="skeleton-title"></div>
+        <div class="skeleton-tag"></div>
+        <div class="skeleton-bio-line"></div>
+        <div class="skeleton-bio-line short"></div>
+      </div>
+      <div class="hero-actions">
+        <div class="skeleton-action-btn"></div>
+        <div class="skeleton-action-btn"></div>
+      </div>
+    </header>
+
+    <div class="highlights-container">
+      <div v-for="i in 3" :key="i" class="skeleton-highlight">
+        <div class="skeleton-circle"></div>
+        <div class="skeleton-label-mini"></div>
+      </div>
+    </div>
+
+    <div class="grid-nav">
+      <div class="grid-tab active"><div class="skeleton-icon-mini"></div></div>
+      <div class="grid-tab"><div class="skeleton-icon-mini"></div></div>
+    </div>
+
+    <div class="ig-grid">
+      <div v-for="i in 9" :key="i" class="skeleton-grid-post"></div>
+    </div>
+  </div>
+
+  <div v-else-if="!sellerData.id" class="error-container">
+    <div class="error-icon">🔍</div>
+    <h3>Artisan Not Found</h3>
+    <p>This path of the heritage seems to be lost.</p>
+    <button class="primary-btn-mini" @click="$emit('go-back')">Go Back</button>
+  </div>
+
+  <div v-else class="tailor-page pattern-heritage animate-fade">
     
     <div class="top-nav-glass">
       <button class="back-btn" @click="$emit('go-back')">
@@ -200,7 +256,7 @@ const makeCall = () => {
 
       <div class="hero-actions">
         <button class="action-btn-secondary">Share</button>
-        <button class="action-btn-secondary flex-center gap-4" @click="$emit('go-reviews')">
+        <button class="action-btn-secondary flex-center gap-4" @click="$emit('go-reviews', sellerData.id)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
           Reviews
         </button>
@@ -223,7 +279,7 @@ const makeCall = () => {
         </div>
         <span>Fabrics</span>
       </div>
-      <div class="highlight-item" @click="$emit('go-reviews')">
+      <div class="highlight-item" @click="$emit('go-reviews', sellerData.id)">
         <div class="highlight-circle">⭐</div>
         <span>Reviews ({{ reviews.length }})</span>
       </div>
@@ -233,7 +289,7 @@ const makeCall = () => {
     <section class="reviews-preview">
       <div class="section-header-row">
         <h3 class="bio-name">Recent Reviews</h3>
-        <button v-if="reviews.length > 0" class="view-all-link" @click="$emit('go-reviews')">View All</button>
+        <button v-if="reviews.length > 0" class="view-all-link" @click="$emit('go-reviews', sellerData.id)">View All</button>
       </div>
       
       <div v-if="reviews.length > 0" class="reviews-mini-list">
@@ -286,6 +342,175 @@ const makeCall = () => {
 </template>
 
 <style scoped>
+.heritage-status-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.status-badge {
+  background: rgba(13, 8, 5, 0.8);
+  backdrop-filter: blur(12px);
+  padding: 16px 24px;
+  border-radius: 100px;
+  border: 1px solid var(--accent-amber);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px var(--accent-glow);
+  animation: badgePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.status-icon-pulse {
+  font-size: 20px;
+  animation: iconPulse 1.5s ease-in-out infinite;
+}
+
+.status-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-amber);
+  letter-spacing: 1px;
+}
+
+@keyframes badgePop {
+  from { transform: scale(0.8) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes iconPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0px var(--accent-amber)); }
+  50% { transform: scale(1.2); filter: drop-shadow(0 0 10px var(--accent-amber)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0px var(--accent-amber)); }
+}
+
+/* Skeleton Loading Animation */
+.skeleton-mode {
+  pointer-events: none;
+  background: var(--wood-deep);
+}
+
+.skeleton-nav {
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.skeleton-back-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--wood-walnut); }
+.skeleton-text-short { width: 100px; height: 16px; background: var(--wood-walnut); border-radius: 4px; }
+.skeleton-icon { width: 24px; height: 24px; background: var(--wood-walnut); border-radius: 4px; }
+
+.skeleton-avatar {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  background: var(--wood-walnut);
+}
+
+.skeleton-stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.skeleton-num { width: 30px; height: 18px; background: var(--wood-walnut); border-radius: 4px; }
+.skeleton-label { width: 50px; height: 12px; background: var(--wood-walnut); border-radius: 4px; }
+
+.skeleton-title { width: 180px; height: 20px; background: var(--wood-walnut); border-radius: 4px; margin-bottom: 8px; }
+.skeleton-tag { width: 120px; height: 14px; background: var(--wood-walnut); border-radius: 4px; margin-bottom: 12px; }
+.skeleton-bio-line { width: 100%; height: 14px; background: var(--wood-walnut); border-radius: 4px; margin-bottom: 6px; }
+.skeleton-bio-line.short { width: 60%; }
+
+.skeleton-action-btn { flex: 1; height: 36px; background: var(--wood-walnut); border-radius: 8px; }
+
+.skeleton-circle { width: 60px; height: 60px; border-radius: 50%; background: var(--wood-walnut); }
+.skeleton-label-mini { width: 40px; height: 10px; background: var(--wood-walnut); border-radius: 4px; margin-top: 6px; }
+
+.skeleton-icon-mini { width: 20px; height: 20px; background: var(--wood-walnut); border-radius: 4px; }
+
+.skeleton-grid-post {
+  aspect-ratio: 1;
+  background: var(--wood-walnut);
+}
+
+/* Shimmer Effect */
+.skeleton-mode [class*="skeleton-"] {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.skeleton-mode [class*="skeleton-"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.1) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.loading-container, .error-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--wood-deep);
+  color: var(--text-muted);
+  gap: 20px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(217, 164, 4, 0.1);
+  border-top-color: var(--accent-amber);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-icon {
+  font-size: 64px;
+  opacity: 0.5;
+}
+
+.primary-btn-mini {
+  background: var(--accent-amber);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .stat-box.clickable {
   cursor: pointer;
   transition: opacity 0.2s;

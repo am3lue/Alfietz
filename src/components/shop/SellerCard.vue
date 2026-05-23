@@ -24,12 +24,11 @@ defineEmits(['select'])
     </div>
     <div class="seller-info">
       <h4 class="seller-name">{{ seller.name }}</h4>
-      <p class="seller-specialty">{{ seller.specialty }}</p>
       <div class="seller-rating">
         <span class="star">★</span>
-        <span class="rating-value">{{ seller.rating }}</span>
+        <span class="rating-value">{{ seller.rating || '0.0' }}</span>
         <span class="divider">•</span>
-        <span class="likes-value">{{ seller.likesCount }} ❤️</span>
+        <span class="likes-value">{{ seller.likesCount || 0 }} ❤️</span>
       </div>
     </div>
   </div>
@@ -90,15 +89,6 @@ defineEmits(['select'])
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 4px 0;
-}
-
-.seller-specialty {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin: 0 0 12px 0;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 600;
 }
 
 .seller-rating {

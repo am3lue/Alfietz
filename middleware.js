@@ -1,5 +1,5 @@
 export const config = {
-  matcher: ['/product/:id*', '/tailor/:id*', '/legal/:path*'],
+  matcher: ['/product/:productId*', '/tailor/:tailorId*', '/@:username', '/legal/:legalPath*'],
 };
 
 export default async function middleware(req) {
@@ -11,19 +11,29 @@ export default async function middleware(req) {
 
   if (isBot) {
     const pathParts = url.pathname.split('/');
-    const type = pathParts[1]; // 'product' or 'tailor'
-    const id = pathParts[2];
+    let type = pathParts[1]; // 'product', 'tailor' or '@username'
+    let id = pathParts[2];
 
-    if (id) {
+    if (type.startsWith('@')) {
+      id = type.substring(1);
+      type = 'tailor-by-username';
+    }
+
+    if (id || type === 'tailor-by-username') {
       try {
         // Fetch data from Turso via HTTP
         const tursoUrl = process.env.VITE_TURSO_URL;
         const tursoToken = process.env.VITE_TURSO_AUTH_TOKEN;
 
         if (tursoUrl && tursoToken) {
-          const sql = type === 'product'
-            ? `SELECT name, description, image FROM products WHERE id = '${id}'`
-            : `SELECT first_name || ' ' || last_name as name, gives as description, avatar as image FROM users WHERE id = '${id}'`;
+          let sql = '';
+          if (type === 'product') {
+            sql = `SELECT name, description, image FROM products WHERE id = '${id}'`;
+          } else if (type === 'tailor') {
+            sql = `SELECT first_name || ' ' || last_name as name, gives as description, avatar as image FROM users WHERE id = '${id}'`;
+          } else if (type === 'tailor-by-username') {
+            sql = `SELECT first_name || ' ' || last_name as name, gives as description, avatar as image FROM users WHERE username = '${id}'`;
+          }
           const response = await fetch(`${tursoUrl}/v1/execute`, {
             method: 'POST',
             headers: {

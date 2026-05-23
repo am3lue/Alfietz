@@ -153,7 +153,8 @@ graph TD
     | **Support** | `/stories` | Route | Heritage Stories & Blogs |
     | **Discovery** | `/explore/:category?` | Route | Filtered marketplace view |
     | **Search** | `/search` → `/search-results` | Sequence | Query interface and result rendering |
-    | **Artisan** | `/tailor/:id` | Route | Public tailor profile & portfolio |
+    | **Artisan** | `/@:username` | Route | Public tailor profile & portfolio |
+
     | **Management** | `/tailor-console` | Route | Private artisan dashboard |
     | **Profile** | `/profile` ↔ `/edit-profile` | Route | User heritage management |
     | **Commerce** | `External (WhatsApp)` | Integration | Direct-to-artisan negotiation channel |

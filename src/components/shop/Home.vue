@@ -13,12 +13,13 @@ const props = defineProps({
   trendingProducts: { type: Array, default: () => [] },
   trendingSellers: { type: Array, default: () => [] },
   exploreItems: { type: Array, default: () => [] },
+  appReviews: { type: Array, default: () => [] },
   isLoading: { type: Boolean, default: false }
 })
 
 const searchQuery = ref('')
 
-const emit = defineEmits(['go-details', 'go-notifications', 'go-search', 'go-explore', 'go-categories', 'go-trending', 'go-tailor', 'toggle-like', 'search'])
+const emit = defineEmits(['go-details', 'go-notifications', 'go-search', 'go-explore', 'go-categories', 'go-trending', 'go-tailor', 'toggle-like', 'search', 'navigate', 'go-stories'])
 
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
@@ -181,6 +182,32 @@ watch(searchQuery, (newVal) => {
           @select="$emit('go-details', item)"
           @toggle-like="(p) => $emit('toggle-like', p)"
         />
+      </div>
+    </section>
+
+    <!-- Tribe Experiences (App Reviews) -->
+    <section v-if="appReviews.length > 0" class="section">
+      <div class="section-header-row">
+        <h2 class="tech-section-title">Tribe Experiences</h2>
+        <button class="view-all-link" @click="$emit('navigate', 'reviews', { isApp: true })">View All →</button>
+      </div>
+      <div class="scroll-container tribe-feedback-scroll">
+        <div v-for="rev in appReviews" :key="rev.id" class="feedback-bubble-card">
+          <div class="bubble-header">
+            <img :src="rev.avatar" class="bubble-avatar" />
+            <div class="bubble-info">
+              <span class="bubble-author">{{ rev.author }}</span>
+              <div class="star-rating mini">
+                <span v-for="n in 5" :key="n" class="star" :class="n <= rev.rating ? 'filled' : 'empty'">★</span>
+              </div>
+            </div>
+          </div>
+          <p class="bubble-text">"{{ rev.text }}"</p>
+        </div>
+        <div class="feedback-cta-card" @click="$emit('navigate', 'app-review')">
+          <div class="cta-plus">+</div>
+          <span>Share your journey</span>
+        </div>
       </div>
     </section>
 
@@ -818,6 +845,105 @@ watch(searchQuery, (newVal) => {
   .explore-grid {
     grid-template-columns: repeat(4, 1fr);
   }
+}
+
+.view-all-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-amber);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.tribe-feedback-scroll {
+  padding-bottom: 24px;
+}
+
+.feedback-bubble-card {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--wood-walnut);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-snap-align: start;
+}
+
+.bubble-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bubble-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+}
+
+.bubble-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.bubble-author {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.bubble-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.feedback-cta-card {
+  width: 160px;
+  flex-shrink: 0;
+  background: rgba(217, 164, 4, 0.05);
+  border: 2px dashed rgba(217, 164, 4, 0.2);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--accent-amber);
+  font-weight: 700;
+  font-size: 13px;
+  text-align: center;
+  padding: 20px;
+  transition: all 0.3s;
+}
+
+.feedback-cta-card:hover {
+  background: rgba(217, 164, 4, 0.1);
+  border-color: var(--accent-amber);
+}
+
+.cta-plus {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent-amber);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
 }
 
 .stories-banner {

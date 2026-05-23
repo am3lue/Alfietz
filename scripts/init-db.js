@@ -13,6 +13,7 @@ async function init() {
 
   try {
     // 1. Drop existing tables in correct order
+    await client.execute("DROP TABLE IF EXISTS app_reviews")
     await client.execute("DROP TABLE IF EXISTS notifications")
     await client.execute("DROP TABLE IF EXISTS feedback")
     await client.execute("DROP TABLE IF EXISTS reviews")
@@ -97,6 +98,18 @@ async function init() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT,
         message TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `)
+
+    await client.execute(`
+      CREATE TABLE app_reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT,
+        rating INTEGER,
+        text TEXT,
+        image TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
       )
@@ -228,6 +241,20 @@ async function init() {
       await client.execute({
         sql: "INSERT INTO reviews (product_id, user_id, rating, text) VALUES (?, ?, ?, ?)",
         args: [p.id, 'guest', 4 + Math.floor(Math.random() * 2), reviewTexts[Math.floor(Math.random() * reviewTexts.length)]]
+      })
+    }
+
+    // 5. Seed initial app reviews
+    const appReviewTexts = [
+      "This app makes it so easy to find authentic heritage pieces!",
+      "The interface is beautiful and intuitive. Love the wood theme.",
+      "Great platform for connecting with skilled artisans directly.",
+      "Alfie is the future of African fashion digital marketplaces!"
+    ]
+    for (const text of appReviewTexts) {
+      await client.execute({
+        sql: "INSERT INTO app_reviews (user_id, rating, text) VALUES (?, ?, ?)",
+        args: ['guest', 5, text]
       })
     }
 

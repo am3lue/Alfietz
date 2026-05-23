@@ -24,6 +24,21 @@ const navigateTo = (routeName) => {
     <div class="content-scroll">
       
       <div class="legal-section">
+        <h3>Community & Feedback</h3>
+        <p class="section-desc">See what the tribe is saying about Alfietz and share your own journey.</p>
+        <div class="legal-links">
+          <button class="legal-link-btn" @click="$emit('navigate', 'reviews', { isApp: true })">
+            <span>Tribe Experiences</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button class="legal-link-btn" @click="$emit('navigate', 'app-review')">
+            <span>Share Your Journey</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="legal-section">
         <h3>Heritage & Safety</h3>
         <p class="section-desc">Resources to ensure a safe and accurate heritage experience.</p>
         <div class="legal-links">

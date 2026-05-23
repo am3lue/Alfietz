@@ -66,7 +66,7 @@ defineEmits(['go-back', 'go-details', 'toggle-like'])
 
 .explore-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
 
@@ -75,18 +75,13 @@ defineEmits(['go-back', 'go-details', 'toggle-like'])
   border: 1px solid var(--glass-border) !important;
   color: var(--text-primary) !important;
   transition: all 0.2s ease !important;
-}
-
-.back-btn:hover {
-  background-color: var(--wood-polished) !important;
-  border-color: var(--accent-amber) !important;
-}
-
-.back-btn {
-  background-color: var(--wood-walnut) !important;
-  border: 1px solid var(--glass-border) !important;
-  color: var(--text-primary) !important;
-  transition: all 0.2s ease !important;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .back-btn:hover {

@@ -2,6 +2,7 @@
 <script setup>
 import { ref } from 'vue'
 import LogoutDialog from './LogoutDialog.vue'
+import ProductCard from '../shop/ProductCard.vue'
 
 defineProps({
   userData: {
@@ -12,13 +13,17 @@ defineProps({
     type: Number,
     default: 0
   },
+  myProducts: {
+    type: Array,
+    default: () => []
+  },
   t: {
     type: Function,
     required: true
   }
 })
 
-defineEmits(['go-back', 'go-edit-profile', 'go-settings', 'go-orders', 'go-upload', 'logout', 'go-console'])
+defineEmits(['go-back', 'go-edit-profile', 'go-settings', 'go-orders', 'go-upload', 'logout', 'go-console', 'go-app-review', 'navigate'])
 
 const showLogoutDialog = ref(false)
 </script>
@@ -95,6 +100,22 @@ const showLogoutDialog = ref(false)
             <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           </div>
 
+          <div class="menu-item" @click="$emit('navigate', 'reviews', { isApp: true })">
+            <div class="menu-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            <span class="menu-text">Tribe Experiences</span>
+            <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+
+          <div class="menu-item" @click="$emit('go-app-review')">
+            <div class="menu-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <span class="menu-text">Share Your Journey</span>
+            <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+
           <div class="menu-item" @click="$emit('go-settings')">
             <div class="menu-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -108,6 +129,20 @@ const showLogoutDialog = ref(false)
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </div>
             <span class="menu-text logout-text">{{ t('logout') }}</span>
+          </div>
+        </div>
+
+        <!-- My Heritage Section (Suppliers Only) -->
+        <div v-if="userData.userType === 'supplier' && myProducts.length > 0" class="my-heritage-section">
+          <h3 class="section-title-alt">My Heritage</h3>
+          <div class="products-grid">
+            <ProductCard 
+              v-for="product in myProducts" 
+              :key="product.id" 
+              :product="product" 
+              @select="$emit('navigate', 'product-details', { selectedProduct: product })"
+              @toggle-like="(p) => $emit('toggle-favorite', p)"
+            />
           </div>
         </div>
       </div>
@@ -256,5 +291,24 @@ const showLogoutDialog = ref(false)
 .back-btn:hover {
   background-color: var(--wood-polished) !important;
   border-color: var(--accent-amber) !important;
+}
+
+.my-heritage-section {
+  margin-top: 40px;
+}
+
+.section-title-alt {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
 }
 </style>
